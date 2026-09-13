@@ -89,7 +89,9 @@ export async function CheckoutSuccessPage({ orderNumber }: { orderNumber: string
 
         <div className="mt-8 grid gap-2">
           <Button asChild size="lg" className="up-sm h-12 font-semibold">
-            <Link href="/account/orders">Track your order</Link>
+            <Link href={orderNumber ? `/track?order=${orderNumber}` : "/track"}>
+              Track your order
+            </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="up-sm h-11 font-semibold">
             <Link href="/products">Keep shopping</Link>

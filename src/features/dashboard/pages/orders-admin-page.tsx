@@ -25,7 +25,8 @@ const CHIPS = [
   { label: "All", value: "" },
   { label: "Awaiting payment", value: "pending" },
   { label: "To fulfil", value: "unfulfilled" },
-  { label: "Fulfilled", value: "fulfilled" },
+  { label: "Shipped", value: "fulfilled" },
+  { label: "Delivered", value: "delivered" },
   { label: "Refunded", value: "refunded" },
   { label: "Cancelled", value: "cancelled" },
 ];

@@ -10,6 +10,7 @@ import type {
   AdminOrderDetail,
   AdminOrderRow,
   AdminProductRow,
+  CategoryRow,
   CustomerRow,
   DashboardStats,
   PaymentRow,
@@ -269,6 +270,7 @@ export async function getAdminOrders(
     "pending",
     "paid",
     "fulfilled",
+    "delivered",
     "cancelled",
     "refunded",
   ] as const satisfies readonly Enums<"order_status">[];
@@ -320,6 +322,7 @@ export async function getAdminOrderCounts(): Promise<Record<string, number>> {
     "pending",
     "paid",
     "fulfilled",
+    "delivered",
     "cancelled",
     "refunded",
   ];
@@ -346,12 +349,21 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetail | null
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("orders")
-    .select(`*, items:order_items(*), payments:payments(*), profile:profiles(full_name, phone)`)
+    .select(
+      `*, items:order_items(*), payments:payments(*), events:order_events(*),
+       profile:profiles(full_name, phone)`,
+    )
     .eq("id", id)
     .maybeSingle<AdminOrderDetail>();
 
   if (error) throw error;
-  return data;
+  if (!data) return null;
+
+  // Oldest first: the activity list reads downwards, like the customer timeline.
+  return {
+    ...data,
+    events: [...data.events].sort((a, b) => a.created_at.localeCompare(b.created_at)),
+  };
 }
 
 /**
@@ -395,7 +407,9 @@ export async function getCustomers(
   const totals = new Map<string, { count: number; cents: number }>();
   for (const order of orders ?? []) {
     if (!order.user_id) continue;
-    if (order.status !== "paid" && order.status !== "fulfilled") continue;
+    // Delivered counts too, or lifetime value would fall the moment a parcel
+    // actually arrived.
+    if (!["paid", "fulfilled", "delivered"].includes(order.status)) continue;
     const entry = totals.get(order.user_id) ?? { count: 0, cents: 0 };
     entry.count += 1;
     entry.cents += order.total_cents;
@@ -510,4 +524,50 @@ export async function getAdminCategories(): Promise<
 
   if (error) throw error;
   return data ?? [];
+}
+
+/**
+ * Categories with their weight in the catalogue.
+ *
+ * The counts come from one narrow read of `products` — two columns, no images
+ * or descriptions — rather than a count query per category. That stays a single
+ * round trip however many categories the store grows.
+ */
+export async function getAdminCategoryRows(): Promise<{
+  rows: CategoryRow[];
+  /** Live products filed under nothing — findable by search only. */
+  uncategorised: number;
+}> {
+  if (!isSupabaseConfigured()) return { rows: [], uncategorised: 0 };
+
+  const supabase = await createClient();
+  const [categories, products] = await Promise.all([
+    supabase.from("categories").select("*").order("position").order("name"),
+    supabase.from("products").select("category_id, status"),
+  ]);
+
+  if (categories.error) throw categories.error;
+  if (products.error) throw products.error;
+
+  const counts = new Map<string, { all: number; active: number }>();
+  let uncategorised = 0;
+  for (const product of products.data ?? []) {
+    if (!product.category_id) {
+      uncategorised += 1;
+      continue;
+    }
+    const entry = counts.get(product.category_id) ?? { all: 0, active: 0 };
+    entry.all += 1;
+    if (product.status === "active") entry.active += 1;
+    counts.set(product.category_id, entry);
+  }
+
+  return {
+    rows: (categories.data ?? []).map((category) => ({
+      ...category,
+      product_count: counts.get(category.id)?.all ?? 0,
+      active_count: counts.get(category.id)?.active ?? 0,
+    })),
+    uncategorised,
+  };
 }

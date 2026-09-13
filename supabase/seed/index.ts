@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database, TablesInsert } from "@/types/database.types";
 import { productPhotoPath } from "@/lib/utils/product-photos";
 import { slugify } from "@/lib/utils/slugify";
+import { trackingUrlFor } from "@/features/orders/services/utils/status";
 import { seedCategories, seedProducts, type SeedProduct } from "./catalog";
 
 function requireEnv(name: string): string {
@@ -241,20 +242,83 @@ const ORDER_PLAN: {
   lines: number;
   payment: string | null;
   method: string;
+  courier?: string;
 }[] = [
   { status: "paid", daysAgo: 0, lines: 2, payment: "success", method: "Visa •••• 4242" },
-  { status: "fulfilled", daysAgo: 1, lines: 1, payment: "success", method: "Mastercard •••• 5510" },
-  { status: "fulfilled", daysAgo: 3, lines: 3, payment: "success", method: "Visa •••• 1881" },
+  { status: "fulfilled", daysAgo: 1, lines: 1, payment: "success", method: "Mastercard •••• 5510", courier: "Bosta" },
+  { status: "fulfilled", daysAgo: 3, lines: 3, payment: "success", method: "Visa •••• 1881", courier: "Mylerz" },
   { status: "refunded", daysAgo: 4, lines: 1, payment: "refunded", method: "Visa •••• 1881" },
+  { status: "delivered", daysAgo: 5, lines: 2, payment: "success", method: "Visa •••• 4242", courier: "Bosta" },
   { status: "paid", daysAgo: 6, lines: 2, payment: "success", method: "Vodafone Cash" },
   { status: "pending", daysAgo: 7, lines: 1, payment: "pending", method: "Visa •••• 3009" },
-  { status: "fulfilled", daysAgo: 11, lines: 2, payment: "success", method: "Visa •••• 4242" },
-  { status: "fulfilled", daysAgo: 15, lines: 1, payment: "success", method: "Mastercard •••• 5510" },
+  { status: "delivered", daysAgo: 9, lines: 1, payment: "success", method: "Mastercard •••• 5510", courier: "Aramex" },
+  { status: "fulfilled", daysAgo: 11, lines: 2, payment: "success", method: "Visa •••• 4242", courier: "Bosta" },
+  { status: "fulfilled", daysAgo: 15, lines: 1, payment: "success", method: "Mastercard •••• 5510", courier: "R2S" },
   { status: "paid", daysAgo: 19, lines: 3, payment: "success", method: "Visa •••• 4242" },
   { status: "cancelled", daysAgo: 22, lines: 1, payment: "declined", method: "Visa •••• 0002" },
-  { status: "fulfilled", daysAgo: 26, lines: 2, payment: "success", method: "Vodafone Cash" },
-  { status: "fulfilled", daysAgo: 29, lines: 1, payment: "success", method: "Visa •••• 4242" },
+  { status: "delivered", daysAgo: 26, lines: 2, payment: "success", method: "Vodafone Cash", courier: "Mylerz" },
+  { status: "fulfilled", daysAgo: 29, lines: 1, payment: "success", method: "Visa •••• 4242", courier: "Bosta" },
 ];
+
+/**
+ * The dated trail behind each seeded order.
+ *
+ * A trigger on `orders` writes one event the moment a row is inserted, stamped
+ * with the insert time — right for a real order, useless for one backdated by a
+ * month. The seed throws that single row away and writes the history the order
+ * would have had, so the customer timeline and the dashboard activity list have
+ * something to show.
+ */
+function eventTrail(
+  status: Database["public"]["Enums"]["order_status"],
+  createdAt: Date,
+  courier?: string,
+): { status: Database["public"]["Enums"]["order_status"]; note: string | null; created_at: string }[] {
+  const at = (hours: number) =>
+    new Date(
+      Math.min(createdAt.getTime() + hours * 3_600_000, Date.now()),
+    ).toISOString();
+
+  const placed = { status: "pending" as const, note: null, created_at: at(0) };
+  const cleared = { status: "paid" as const, note: null, created_at: at(0.4) };
+  const shipped = {
+    status: "fulfilled" as const,
+    note: courier ? `Collected by ${courier} from the Cairo warehouse.` : null,
+    created_at: at(21),
+  };
+
+  switch (status) {
+    case "pending":
+      return [placed];
+    case "paid":
+      return [placed, cleared];
+    case "fulfilled":
+      return [placed, cleared, shipped];
+    case "delivered":
+      return [
+        placed,
+        cleared,
+        shipped,
+        { status: "delivered", note: "Signed for at the door.", created_at: at(69) },
+      ];
+    case "cancelled":
+      return [
+        placed,
+        { status: "cancelled", note: "Payment never cleared.", created_at: at(26) },
+      ];
+    case "refunded":
+      return [
+        placed,
+        cleared,
+        { status: "refunded", note: "Returned to the original card.", created_at: at(47) },
+      ];
+  }
+}
+
+/** A believable consignment number, stable for a given order index. */
+function consignment(index: number): string {
+  return String(41_720_000 + index * 1_337);
+}
 
 async function seedOrders(demoCustomerId: string) {
   const { count } = await supabase
@@ -314,6 +378,9 @@ async function seedOrders(demoCustomerId: string) {
     createdAt.setDate(createdAt.getDate() - plan.daysAgo);
     createdAt.setHours(9 + (index % 12), (index * 7) % 60, 0, 0);
 
+    const trail = eventTrail(plan.status, createdAt, plan.courier);
+    const tracking = plan.courier ? consignment(index) : null;
+
     const { data: orderNumberData, error: orderNumberError } =
       await supabase.rpc("next_order_number");
     if (orderNumberError) throw orderNumberError;
@@ -337,7 +404,14 @@ async function seedOrders(demoCustomerId: string) {
           governorate: customer.city,
           country: "Egypt",
         },
-        fulfilled_at: plan.status === "fulfilled" ? createdAt.toISOString() : null,
+        fulfilled_at:
+          trail.find((event) => event.status === "fulfilled")?.created_at ?? null,
+        delivered_at:
+          trail.find((event) => event.status === "delivered")?.created_at ?? null,
+        courier: plan.courier ?? null,
+        tracking_number: tracking,
+        tracking_url: plan.courier && tracking ? trackingUrlFor(plan.courier, tracking) : null,
+        status_note: trail[trail.length - 1].note,
         created_at: createdAt.toISOString(),
       })
       .select("id")
@@ -374,9 +448,17 @@ async function seedOrders(demoCustomerId: string) {
       });
       if (paymentError) throw paymentError;
     }
+
+    // The trigger stamped one event at insert time. Throw it away and write the
+    // history this backdated order would really have had.
+    await supabase.from("order_events").delete().eq("order_id", order.id);
+    const { error: eventError } = await supabase
+      .from("order_events")
+      .insert(trail.map((event) => ({ order_id: order.id, ...event })));
+    if (eventError) throw eventError;
   }
 
-  console.log(`  ${ORDER_PLAN.length} orders with items and payments`);
+  console.log(`  ${ORDER_PLAN.length} orders with items, payments and status history`);
 }
 
 async function main() {

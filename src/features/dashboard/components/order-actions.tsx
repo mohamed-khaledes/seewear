@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Loader2, PackageCheck, RotateCcw, XCircle } from "lucide-react";
+import { Loader2, RotateCcw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -21,7 +21,6 @@ import { formatMoney } from "@/lib/utils";
 import { useDemoGuard } from "@/features/dashboard/hooks/use-demo-guard";
 import {
   cancelOrderAction,
-  markOrderFulfilledAction,
   refundOrderAction,
 } from "@/features/dashboard/services/api/order-actions";
 import type { ActionResult } from "@/features/dashboard/types";
@@ -57,20 +56,6 @@ export function OrderActions({
     <div className="flex flex-wrap items-center gap-2">
       {pending ? <Loader2 className="size-4 animate-spin text-grey" /> : null}
 
-      {status === "paid" ? (
-        <Button
-          size="lg"
-          className="h-10 text-xs font-semibold"
-          disabled={pending}
-          onClick={() =>
-            run(() => markOrderFulfilledAction(orderId), "Marked fulfilled — customer notified")
-          }
-        >
-          <PackageCheck />
-          Mark fulfilled
-        </Button>
-      ) : null}
-
       {status === "pending" ? (
         <Button
           variant="outline"
@@ -84,7 +69,7 @@ export function OrderActions({
         </Button>
       ) : null}
 
-      {status === "paid" || status === "fulfilled" ? (
+      {status === "paid" || status === "fulfilled" || status === "delivered" ? (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button

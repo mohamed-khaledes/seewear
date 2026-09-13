@@ -33,6 +33,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.5,
     },
+    {
+      url: `${siteConfig.url}/track`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
     // Driven by the same list the navigation uses, so a new help topic is
     // indexable the moment it is linked.
     ...helpTopics.map((topic) => ({

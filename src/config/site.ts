@@ -71,7 +71,9 @@ export const footerNav: { title: string; href?: string; links: NavLink[] }[] = [
     href: "/help",
     links: [
       ...helpTopics.map(({ label, href }) => ({ label, href })),
-      { label: "Track Order", href: "/account/orders" },
+      // Public, because guest checkout means most orders have no account
+      // behind them to log into.
+      { label: "Track Order", href: "/track" },
     ],
   },
   {

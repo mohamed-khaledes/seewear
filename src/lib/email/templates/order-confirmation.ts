@@ -84,7 +84,7 @@ export function orderConfirmationText(data: OrderEmailData): string {
       .map((line) => `  ${line}`)
       .join("\n"),
     "",
-    `Track it: ${siteConfig.url}/account/orders`,
+    `Track it: ${siteConfig.url}/track?order=${encodeURIComponent(data.orderNumber)}`,
     "",
     `${siteConfig.name} — ${siteConfig.support.email}`,
   ]
@@ -162,7 +162,7 @@ export function orderConfirmationHtml(data: OrderEmailData): string {
         </p>
       </div>
 
-      <a href="${siteConfig.url}/account/orders"
+      <a href="${siteConfig.url}/track?order=${encodeURIComponent(data.orderNumber)}"
          style="display:inline-block;margin-top:28px;background:#0a0a0a;color:#ffffff;text-decoration:none;padding:14px 26px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;">
         Track this order
       </a>

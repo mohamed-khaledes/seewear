@@ -2,6 +2,7 @@
 export { OverviewPage } from "./pages/overview-page";
 export { ProductsAdminPage } from "./pages/products-admin-page";
 export { ProductFormPage } from "./pages/product-form-page";
+export { CategoriesAdminPage } from "./pages/categories-admin-page";
 export { OrdersAdminPage } from "./pages/orders-admin-page";
 export { OrderAdminDetailPage } from "./pages/order-admin-detail-page";
 export { CustomersAdminPage } from "./pages/customers-admin-page";

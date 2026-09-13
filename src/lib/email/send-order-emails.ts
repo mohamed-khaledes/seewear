@@ -19,13 +19,38 @@ export async function sendOrderConfirmation(data: OrderEmailData): Promise<boole
   });
 }
 
-/** Sent from the dashboard when an order is marked fulfilled. */
+/**
+ * Sent when an order is marked shipped in the dashboard. The consignment number
+ * is the point of the email, so it appears as text as well as behind a button —
+ * courier references get typed into the courier's own site as often as clicked.
+ */
 export async function sendFulfilmentNotice(args: {
   email: string;
   orderNumber: string;
   totalCents: number;
+  courier?: string | null;
+  trackingNumber?: string | null;
+  trackingUrl?: string | null;
 }): Promise<boolean> {
-  const { email, orderNumber, totalCents } = args;
+  const { email, orderNumber, totalCents, courier, trackingNumber, trackingUrl } = args;
+  const trackHere = `${siteConfig.url}/track?order=${encodeURIComponent(orderNumber)}`;
+  const consignment = [courier, trackingNumber].filter(Boolean).join(" · ");
+
+  const consignmentBlock = consignment
+    ? `<table style="margin-top:22px;border-collapse:collapse;width:100%;background:#f2f2f0;">
+         <tr>
+           <td style="padding:14px 16px;">
+             <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#6b6b67;">${courier ?? "Courier"}</div>
+             <div style="margin-top:4px;font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;color:#0a0a0a;">${trackingNumber ?? ""}</div>
+           </td>
+           ${
+             trackingUrl
+               ? `<td align="right" style="padding:14px 16px;"><a href="${trackingUrl}" style="font-size:12px;font-weight:600;color:#0a0a0a;">Courier tracking &rarr;</a></td>`
+               : ""
+           }
+         </tr>
+       </table>`
+    : "";
 
   return sendEmail({
     to: email,
@@ -33,10 +58,15 @@ export async function sendFulfilmentNotice(args: {
     text: [
       `Order ${orderNumber} has left us.`,
       "",
+      consignment ? `Courier: ${consignment}` : "",
+      trackingUrl ? `Courier tracking: ${trackingUrl}` : "",
+      consignment ? "" : "",
       `Total paid: ${formatMoney(totalCents)}`,
       "",
-      `Track it: ${siteConfig.url}/account/orders`,
-    ].join("\n"),
+      `Follow every step here: ${trackHere}`,
+    ]
+      .filter((line, index, lines) => line !== "" || lines[index - 1] !== "")
+      .join("\n"),
     html: `<!doctype html>
 <html lang="en">
 <body style="margin:0;background:#f2f2f0;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
@@ -51,7 +81,8 @@ export async function sendFulfilmentNotice(args: {
         Your order has left us and is with the courier. Delivery across Egypt usually
         takes two to four working days.
       </p>
-      <a href="${siteConfig.url}/account/orders"
+      ${consignmentBlock}
+      <a href="${trackHere}"
          style="display:inline-block;margin-top:26px;background:#0a0a0a;color:#ffffff;text-decoration:none;padding:14px 26px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;">
         Track this order
       </a>

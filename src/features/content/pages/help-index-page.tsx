@@ -46,14 +46,15 @@ export function HelpIndexPage() {
                 Looking for a specific order?
               </h2>
               <p className="mt-1 max-w-[46ch] text-sm leading-relaxed text-white/65">
-                Every order, its status and its tracking reference sit in your
-                account. Guests can use the link in the confirmation email.
+                Your order number and the email you checked out with are enough.
+                No account needed — and everything you have ordered is in your
+                account too.
               </p>
             </div>
           </div>
 
           <Link
-            href="/account/orders"
+            href="/track"
             className="up-sm shrink-0 border border-white/25 px-5 py-3 font-semibold transition-colors hover:border-white hover:bg-white hover:text-ink"
           >
             Track an order

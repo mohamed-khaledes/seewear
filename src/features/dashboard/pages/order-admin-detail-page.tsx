@@ -8,6 +8,7 @@ import { formatDateTime, formatMoney } from "@/lib/utils";
 import { orderStatusMeta, paymentStatus, readShippingAddress } from "@/features/orders";
 import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topbar";
 import { OrderActions } from "@/features/dashboard/components/order-actions";
+import { OrderStatusForm } from "@/features/dashboard/components/order-status-form";
 import { Panel } from "@/features/dashboard/components/panel";
 import { getAdminOrder } from "@/features/dashboard/services/api/dashboard.server";
 
@@ -122,20 +123,72 @@ export async function OrderAdminDetailPage({ orderId }: { orderId: string }) {
                 </ul>
               )}
             </Panel>
+
+            <Panel
+              title="Activity"
+              note={`${order.events.length} ${order.events.length === 1 ? "step" : "steps"}`}
+              bodyClassName="p-0"
+            >
+              {order.events.length === 0 ? (
+                <p className="px-5 py-8 text-center text-sm text-grey-2">
+                  Nothing logged yet. Every status change lands here from now on.
+                </p>
+              ) : (
+                <ol className="divide-y divide-line">
+                  {order.events.map((event) => (
+                    <li
+                      key={event.id}
+                      className="flex flex-wrap items-start justify-between gap-3 px-5 py-3.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[12.5px] font-semibold">
+                          {orderStatusMeta[event.status].label}
+                        </p>
+                        {event.note ? (
+                          <p className="mt-0.5 text-[11px] text-grey-2">{event.note}</p>
+                        ) : null}
+                      </div>
+                      <span className="text-[11px] tabular-nums text-grey">
+                        {formatDateTime(event.created_at)}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </Panel>
           </div>
 
           <aside className="grid h-fit gap-4">
             <Panel title="Status">
-              <div className="grid gap-2.5">
-                <StatusPill tone={meta.tone} className="w-fit">
-                  {meta.label}
-                </StatusPill>
-                <p className="text-sm text-grey-2">{meta.blurb}</p>
-                {order.fulfilled_at ? (
-                  <p className="up-xs text-grey">
-                    Fulfilled {formatDateTime(order.fulfilled_at)}
+              <div className="grid gap-4">
+                <div className="grid gap-2.5">
+                  <StatusPill tone={meta.tone} className="w-fit">
+                    {meta.label}
+                  </StatusPill>
+                  <p className="text-sm text-grey-2">
+                    {order.status_note ?? meta.blurb}
                   </p>
-                ) : null}
+                  {order.fulfilled_at ? (
+                    <p className="up-xs text-grey">
+                      Shipped {formatDateTime(order.fulfilled_at)}
+                    </p>
+                  ) : null}
+                  {order.delivered_at ? (
+                    <p className="up-xs text-grey">
+                      Delivered {formatDateTime(order.delivered_at)}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="border-t border-line pt-4">
+                  <OrderStatusForm
+                    orderId={order.id}
+                    status={order.status}
+                    courier={order.courier}
+                    trackingNumber={order.tracking_number}
+                    trackingUrl={order.tracking_url}
+                  />
+                </div>
               </div>
             </Panel>
 

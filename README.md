@@ -62,6 +62,8 @@ Migrations, in order:
 | `..._settings_and_discounts.sql` | store settings and discount codes |
 | `..._auth_hook.sql` | `custom_access_token_hook` — puts `user_role` in the JWT |
 | `..._fix_profile_column_guard.sql` | lets service-role writes set `role`/`is_demo` (the seed needs this) |
+| `..._order_status_delivered.sql` | adds `delivered` to the `order_status` enum |
+| `..._order_tracking.sql` | courier columns on `orders`, the `order_events` trail and the trigger that writes it |
 
 After the last one, switch the hook on in the Supabase dashboard:
 **Authentication → Hooks → Customize Access Token (JWT) Claims →
@@ -318,6 +320,58 @@ Two things keep this from rotting:
 The contact form posts to a server action that sends through Resend, with the
 customer set as reply-to. Without `RESEND_API_KEY` it says so plainly and points
 at the support address rather than showing a success screen that sent nothing.
+
+## Categories
+
+`/dashboard/categories` is the only place categories are created, renamed,
+reordered or removed. A category reaches four surfaces at once, so all four are
+revalidated on every write: the dashboard list, the product form's picker, the
+storefront filter rail and the sitemap.
+
+Two rules the screen enforces that the database does not:
+
+- **A category holding products cannot be deleted.** The foreign key is
+  `on delete set null`, so Postgres would accept it and quietly leave those
+  products uncategorised — still for sale, but absent from every category page.
+  The action counts first and says what is in the way.
+- **The slug is a URL.** It is offered automatically from the name while it is
+  untouched, and never rewritten for an existing category, because
+  `/products?category=hoodies` may already be a shared link.
+
+The page also counts products filed under nothing and says so, since that is
+invisible everywhere else.
+
+## Order status and customer tracking
+
+The journey is `pending → paid → fulfilled → delivered`, with `cancelled` and
+`refunded` off to the side.
+
+**Who may set what.** `ORDER_STATUS_FLOW` in `features/orders` is the single
+description of the allowed moves, read by the dashboard select and checked again
+in the server action. Three statuses are deliberately not in it:
+
+| Status | Set by | Why not by hand |
+|---|---|---|
+| `paid` | the HMAC-verified Paymob webhook | it is also what decrements stock, so a second route would oversell |
+| `refunded` | the Refund action | the money has to actually move before the label says it did |
+| `cancelled` | the Cancel button, on a pending order | stopping an order is not a step forward |
+
+**The trail.** Every status change writes a row to `order_events` — from a
+trigger on `orders`, not from the dashboard, so a change made by the webhook or
+by hand in SQL is logged the same way. That table is what dates the customer's
+timeline; the note the admin types travels with the transition through
+`orders.status_note`.
+
+**What the customer sees.** The timeline on `/account/orders/<number>` shows each
+step with the date it happened, the courier and the consignment number, and a
+link straight to the courier. The shipped email carries the same three.
+
+**Guests.** Guest orders have no `user_id`, so RLS hides them from every browser
+session — right, and it used to leave guests with no way to follow a parcel.
+`/track` takes an order number and the email it was placed with, looks the pair
+up server-side with the service-role key, and answers identically whichever one
+is wrong so the order-number sequence cannot be walked. It returns a narrower
+view than the account page: where the parcel is, not the address on the label.
 
 ## Layout
 

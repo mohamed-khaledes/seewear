@@ -69,6 +69,7 @@ export type AdminOrderRow = Pick<
 export type AdminOrderDetail = Tables<"orders"> & {
   items: Tables<"order_items">[];
   payments: Tables<"payments">[];
+  events: Tables<"order_events">[];
   profile: { full_name: string | null; phone: string | null } | null;
 };
 
@@ -76,6 +77,12 @@ export type CustomerRow = Tables<"profiles"> & {
   order_count: number;
   lifetime_cents: number;
   email: string | null;
+};
+
+/** A category with how much of the catalogue actually sits in it. */
+export type CategoryRow = Tables<"categories"> & {
+  product_count: number;
+  active_count: number;
 };
 
 export type PaymentRow = Tables<"payments"> & {
@@ -167,6 +174,46 @@ export const discountFormSchema = z
   });
 
 export type DiscountFormValues = z.infer<typeof discountFormSchema>;
+
+export const categoryFormSchema = z.object({
+  name: z.string().trim().min(2, "Give it a name").max(60),
+  slug: z
+    .string()
+    .trim()
+    .min(2, "Slugs need at least two characters")
+    .max(60)
+    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
+  /** Lower sorts first. The filter rail and the storefront both read it. */
+  position: z.number().int().min(0, "Cannot be negative").max(999),
+});
+
+export type CategoryFormValues = z.infer<typeof categoryFormSchema>;
+
+/**
+ * Moving one order along. The server checks `status` again against the allowed
+ * transitions — this schema only shapes the form.
+ */
+export const orderStatusFormSchema = z
+  .object({
+    status: z.enum([
+      "pending",
+      "paid",
+      "fulfilled",
+      "delivered",
+      "cancelled",
+      "refunded",
+    ]),
+    note: z.string().trim().max(200, "Keep it under 200 characters"),
+    courier: z.string().trim().max(40),
+    trackingNumber: z.string().trim().max(60),
+    trackingUrl: z.string().trim().max(400),
+  })
+  .refine((values) => !values.trackingUrl || /^https?:\/\//.test(values.trackingUrl), {
+    message: "Tracking links need to start with http:// or https://",
+    path: ["trackingUrl"],
+  });
+
+export type OrderStatusFormValues = z.infer<typeof orderStatusFormSchema>;
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }

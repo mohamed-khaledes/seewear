@@ -215,6 +215,11 @@ export type Database = {
           shipping_address: Json;
           discount_code: string | null;
           fulfilled_at: string | null;
+          delivered_at: string | null;
+          courier: string | null;
+          tracking_number: string | null;
+          tracking_url: string | null;
+          status_note: string | null;
           created_at: string;
         };
         Insert: {
@@ -232,6 +237,11 @@ export type Database = {
           shipping_address: Json;
           discount_code?: string | null;
           fulfilled_at?: string | null;
+          delivered_at?: string | null;
+          courier?: string | null;
+          tracking_number?: string | null;
+          tracking_url?: string | null;
+          status_note?: string | null;
           created_at?: string;
         };
         Update: {
@@ -249,6 +259,11 @@ export type Database = {
           shipping_address?: Json;
           discount_code?: string | null;
           fulfilled_at?: string | null;
+          delivered_at?: string | null;
+          courier?: string | null;
+          tracking_number?: string | null;
+          tracking_url?: string | null;
+          status_note?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -256,6 +271,37 @@ export type Database = {
             foreignKeyName: "orders_user_id_fkey";
             columns: ["user_id"];
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_events: {
+        Row: {
+          id: string;
+          order_id: string;
+          status: Database["public"]["Enums"]["order_status"];
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          status: Database["public"]["Enums"]["order_status"];
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          status?: Database["public"]["Enums"]["order_status"];
+          note?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_events_order_id_fkey";
+            columns: ["order_id"];
+            referencedRelation: "orders";
             referencedColumns: ["id"];
           },
         ];
@@ -459,7 +505,13 @@ export type Database = {
     };
     Enums: {
       user_role: "admin" | "user";
-      order_status: "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
+      order_status:
+        | "pending"
+        | "paid"
+        | "fulfilled"
+        | "delivered"
+        | "cancelled"
+        | "refunded";
       product_status: "active" | "draft";
     };
     CompositeTypes: Record<never, never>;

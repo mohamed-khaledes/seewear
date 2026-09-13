@@ -8,6 +8,7 @@ import {
   Package,
   Receipt,
   Settings,
+  Shapes,
   Store,
   Tags,
   Users,
@@ -26,6 +27,7 @@ const GROUPS: {
     links: [
       { href: "/dashboard", label: "Overview", icon: <LayoutGrid /> },
       { href: "/dashboard/products", label: "Products", icon: <Package /> },
+      { href: "/dashboard/categories", label: "Categories", icon: <Shapes /> },
       { href: "/dashboard/orders", label: "Orders", icon: <Receipt /> },
       { href: "/dashboard/customers", label: "Customers", icon: <Users /> },
     ],

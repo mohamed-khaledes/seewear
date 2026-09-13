@@ -84,7 +84,17 @@ export async function OrderDetailPage({ orderNumber }: { orderNumber: string }) 
 
           <section className="border border-line bg-paper p-5">
             <h2 className="up-sm mb-4 text-grey-2">Progress</h2>
-            <OrderTimeline status={order.status} />
+            <OrderTimeline
+              status={order.status}
+              events={order.events.map((event) => ({
+                status: event.status,
+                note: event.note,
+                createdAt: event.created_at,
+              }))}
+              courier={order.courier}
+              trackingNumber={order.tracking_number}
+              trackingUrl={order.tracking_url}
+            />
           </section>
 
           {order.payments.length > 0 ? (
