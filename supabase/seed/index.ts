@@ -243,7 +243,12 @@ const ORDER_PLAN: {
   payment: string | null;
   method: string;
   courier?: string;
+  /** Cash on delivery: no card payment, and money only arrives at delivery. */
+  cod?: true;
 }[] = [
+  { status: "confirmed", daysAgo: 0, lines: 1, payment: null, method: "Cash on delivery", cod: true },
+  { status: "fulfilled", daysAgo: 2, lines: 2, payment: null, method: "Cash on delivery", courier: "Bosta", cod: true },
+  { status: "delivered", daysAgo: 8, lines: 1, payment: "success", method: "Cash on delivery", courier: "Mylerz", cod: true },
   { status: "paid", daysAgo: 0, lines: 2, payment: "success", method: "Visa •••• 4242" },
   { status: "fulfilled", daysAgo: 1, lines: 1, payment: "success", method: "Mastercard •••• 5510", courier: "Bosta" },
   { status: "fulfilled", daysAgo: 3, lines: 3, payment: "success", method: "Visa •••• 1881", courier: "Mylerz" },
@@ -273,6 +278,7 @@ function eventTrail(
   status: Database["public"]["Enums"]["order_status"],
   createdAt: Date,
   courier?: string,
+  cod = false,
 ): { status: Database["public"]["Enums"]["order_status"]; note: string | null; created_at: string }[] {
   const at = (hours: number) =>
     new Date(
@@ -280,7 +286,10 @@ function eventTrail(
     ).toISOString();
 
   const placed = { status: "pending" as const, note: null, created_at: at(0) };
-  const cleared = { status: "paid" as const, note: null, created_at: at(0.4) };
+  // A cash order is confirmed on the spot; a card order clears when Paymob says so.
+  const cleared = cod
+    ? { status: "confirmed" as const, note: "Confirmed. Pay in cash when the courier arrives.", created_at: at(0.01) }
+    : { status: "paid" as const, note: null, created_at: at(0.4) };
   const shipped = {
     status: "fulfilled" as const,
     note: courier ? `Collected by ${courier} from the Cairo warehouse.` : null,
@@ -290,6 +299,7 @@ function eventTrail(
   switch (status) {
     case "pending":
       return [placed];
+    case "confirmed":
     case "paid":
       return [placed, cleared];
     case "fulfilled":
@@ -299,7 +309,11 @@ function eventTrail(
         placed,
         cleared,
         shipped,
-        { status: "delivered", note: "Signed for at the door.", created_at: at(69) },
+        {
+          status: "delivered",
+          note: cod ? "Signed for and paid in cash at the door." : "Signed for at the door.",
+          created_at: at(69),
+        },
       ];
     case "cancelled":
       return [
@@ -378,7 +392,7 @@ async function seedOrders(demoCustomerId: string) {
     createdAt.setDate(createdAt.getDate() - plan.daysAgo);
     createdAt.setHours(9 + (index % 12), (index * 7) % 60, 0, 0);
 
-    const trail = eventTrail(plan.status, createdAt, plan.courier);
+    const trail = eventTrail(plan.status, createdAt, plan.courier, plan.cod);
     const tracking = plan.courier ? consignment(index) : null;
 
     const { data: orderNumberData, error: orderNumberError } =
@@ -392,6 +406,8 @@ async function seedOrders(demoCustomerId: string) {
         user_id: asDemoCustomer ? demoCustomerId : null,
         email: asDemoCustomer ? requireEnv("DEMO_CUSTOMER_EMAIL") : customer.email,
         status: plan.status,
+        payment_method: plan.cod ? "cod" : "card",
+        refunded_cents: plan.status === "refunded" ? total : 0,
         subtotal_cents: subtotal,
         shipping_cents: shipping,
         tax_cents: tax,
@@ -437,13 +453,14 @@ async function seedOrders(demoCustomerId: string) {
     if (plan.payment) {
       const { error: paymentError } = await supabase.from("payments").insert({
         order_id: order.id,
-        provider: "paymob",
-        paymob_order_id: `${920000 + index}`,
-        transaction_id: `seed-${order.id.slice(0, 8)}`,
+        provider: plan.cod ? "cash" : "paymob",
+        paymob_order_id: plan.cod ? null : `${920000 + index}`,
+        transaction_id: plan.cod ? `cash-${orderNumberData}` : `seed-${order.id.slice(0, 8)}`,
         method: plan.method,
         amount_cents: plan.payment === "refunded" ? -total : total,
         status: plan.payment,
-        hmac_verified: plan.payment !== "pending",
+        // Cash is recorded by hand, never verified by a Paymob callback.
+        hmac_verified: !plan.cod && plan.payment !== "pending",
         created_at: createdAt.toISOString(),
       });
       if (paymentError) throw paymentError;

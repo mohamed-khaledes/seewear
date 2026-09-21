@@ -160,6 +160,7 @@ function TrackedOrderView({
         <div className="mt-7 border-t border-line pt-7">
           <OrderTimeline
             status={order.status}
+            paymentMethod={order.paymentMethod}
             events={order.events}
             courier={order.courier}
             trackingNumber={order.trackingNumber}

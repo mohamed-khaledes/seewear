@@ -53,6 +53,16 @@ export const helpTopics: (NavLink & { blurb: string })[] = [
   },
 ];
 
+/**
+ * The policies a customer agrees to at checkout. Like `helpTopics`, this one
+ * list feeds the footer, the legal sidebar and the sitemap.
+ */
+export const legalPages: (NavLink & { blurb: string })[] = [
+  { label: "Terms of sale", href: "/legal/terms", blurb: "The contract behind every order." },
+  { label: "Privacy", href: "/legal/privacy", blurb: "What we keep about you, and why." },
+  { label: "Cookies", href: "/legal/cookies", blurb: "The few we set, all of them necessary." },
+];
+
 /** `href` makes the column heading itself a link to that section's landing page. */
 export const footerNav: { title: string; href?: string; links: NavLink[] }[] = [
   {
@@ -85,6 +95,10 @@ export const footerNav: { title: string; href?: string; links: NavLink[] }[] = [
       { label: "Careers", href: "/about#careers" },
       { label: "Sustainability", href: "/about#sustainability" },
     ],
+  },
+  {
+    title: "Legal",
+    links: legalPages.map(({ label, href }) => ({ label, href })),
   },
 ];
 

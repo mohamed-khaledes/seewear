@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { cn, discountPercent, formatMoney } from "@/lib/utils";
-import { FREE_SHIPPING_THRESHOLD_CENTS } from "@/config/constants";
-import { useAddToBag } from "@/features/cart";
+import { useAddToBag, usePricingRules } from "@/features/cart";
+import { useSessionUser } from "@/features/auth";
 import { WishlistButton } from "@/features/wishlist";
+import { StockAlertForm } from "@/features/products/components/stock-alert-form";
 import type { ProductDetail } from "@/features/products/types";
 import {
   colorOptions,
@@ -40,6 +41,8 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
   );
 
   const addToBag = useAddToBag();
+  const rules = usePricingRules();
+  const user = useSessionUser();
   const variant = findVariant(product, color, size);
   const price = priceCentsFor(product, variant);
   const image = imageForColor(product, color);
@@ -148,19 +151,21 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
             </legend>
             <div className="flex flex-wrap gap-2">
               {sizes.map((option) => (
+                // Sold-out sizes stay selectable: choosing one is how a shopper
+                // asks to be told when it is back.
                 <button
                   key={option.name}
                   type="button"
-                  disabled={option.stock === 0}
                   onClick={() => setSize(option.name)}
                   aria-pressed={size === option.name}
+                  aria-label={option.stock === 0 ? `${option.name}, sold out` : option.name}
                   className={cn(
                     "up-xs min-w-14 border px-3 py-3 font-semibold transition-colors",
                     size === option.name
                       ? "border-ink bg-ink text-white"
                       : "border-line hover:border-ink",
-                    option.stock === 0 &&
-                      "cursor-not-allowed text-grey line-through hover:border-line",
+                    option.stock === 0 && "line-through",
+                    option.stock === 0 && size !== option.name && "text-grey",
                   )}
                 >
                   {option.name}
@@ -191,9 +196,20 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
           />
         </div>
 
+        {soldOut && variant ? (
+          <div className="mt-3">
+            <StockAlertForm
+              key={variant.id}
+              variantId={variant.id}
+              label={[variant.color, variant.size].filter(Boolean).join(" · ")}
+              defaultEmail={user?.email ?? ""}
+            />
+          </div>
+        ) : null}
+
         <p className="up-xs mt-4 flex items-center gap-2 text-grey-2">
           <Truck className="size-3.5" />
-          Free express shipping over {formatMoney(FREE_SHIPPING_THRESHOLD_CENTS)}
+          Free express shipping over {formatMoney(rules.freeShippingThresholdCents)}
         </p>
 
         <Accordion type="single" collapsible className="mt-8 border-t border-line">
@@ -213,7 +229,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
             </AccordionTrigger>
             <AccordionContent className="text-sm leading-relaxed text-grey-2">
               Express delivery across Egypt in two to four working days. Free over{" "}
-              {formatMoney(FREE_SHIPPING_THRESHOLD_CENTS)}. Unworn pieces can be
+              {formatMoney(rules.freeShippingThresholdCents)}. Unworn pieces can be
               returned within 14 days.
             </AccordionContent>
           </AccordionItem>

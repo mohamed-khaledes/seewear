@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string }>;
+  searchParams: Promise<{ order?: string; method?: string }>;
 }) {
-  const { order } = await searchParams;
-  return <CheckoutSuccessPage orderNumber={order ?? ""} />;
+  const { order, method } = await searchParams;
+  return <CheckoutSuccessPage orderNumber={order ?? ""} method={method} />;
 }

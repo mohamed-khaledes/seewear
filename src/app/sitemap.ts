@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { helpTopics, siteConfig } from "@/config/site";
+import { helpTopics, legalPages, siteConfig } from "@/config/site";
 import { getCategories, getProductSlugs } from "@/features/products/server";
 
 export const revalidate = 3600;
@@ -46,6 +46,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.4,
+    })),
+    ...legalPages.map((page) => ({
+      url: `${siteConfig.url}${page.href}`,
+      lastModified: now,
+      changeFrequency: "yearly" as const,
+      priority: 0.2,
     })),
     ...categories.map((category) => ({
       url: `${siteConfig.url}/products?category=${category.slug}`,

@@ -215,3 +215,24 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------
+   Print. Invoices and packing slips are ordinary pages inside the
+   shop and dashboard layouts, so they keep their auth checks; the
+   site chrome marked data-chrome simply disappears on paper.
+----------------------------------------------------------------- */
+@media print {
+  [data-chrome],
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+}

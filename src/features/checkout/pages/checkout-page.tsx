@@ -8,15 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/config/site";
 import { useSessionUser } from "@/features/auth/components/session-provider";
+import type { SavedAddress } from "@/features/auth";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { CheckoutForm } from "@/features/checkout/components/checkout-form";
 import { OrderSummary } from "@/features/checkout/components/order-summary";
 import type { DiscountPreview } from "@/features/checkout/types";
 
-export function CheckoutPage() {
-  const { items, hydrated, clear } = useCart();
+export function CheckoutPage({ savedAddresses = [] }: { savedAddresses?: SavedAddress[] }) {
+  const { items, hydrated, clear, rules } = useCart();
   const user = useSessionUser();
   const [discount, setDiscount] = useState<DiscountPreview | null>(null);
+
+  // Held here so the summary beside the form can re-price shipping the moment
+  // a governorate is picked, and check once-per-customer codes against the
+  // email actually being used.
+  const initial = savedAddresses.find((address) => address.is_default) ?? savedAddresses[0];
+  const [governorate, setGovernorate] = useState(initial?.governorate ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
 
   if (!hydrated) {
     return (
@@ -65,13 +73,25 @@ export function CheckoutPage() {
         <CheckoutForm
           items={items}
           discount={discount}
+          rules={rules}
+          signedIn={Boolean(user)}
+          savedAddresses={savedAddresses}
           defaultEmail={user?.email ?? ""}
           defaultName={user?.fullName ?? ""}
           onOrderPlaced={clear}
+          onGovernorateChange={setGovernorate}
+          onEmailChange={setEmail}
         />
       </div>
 
-      <OrderSummary items={items} discount={discount} onDiscountChange={setDiscount} />
+      <OrderSummary
+        items={items}
+        discount={discount}
+        rules={rules}
+        governorate={governorate}
+        email={email}
+        onDiscountChange={setDiscount}
+      />
     </div>
   );
 }

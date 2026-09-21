@@ -85,6 +85,9 @@ export type CategoryRow = Tables<"categories"> & {
   active_count: number;
 };
 
+/** A code with how often it has been spent — any order that was not cancelled. */
+export type DiscountWithUsage = Tables<"discount_codes"> & { uses: number };
+
 export type PaymentRow = Tables<"payments"> & {
   order: { order_number: string } | null;
 };
@@ -150,12 +153,36 @@ export const storeSettingsFormSchema = z.object({
   freeShippingThreshold: moneyField,
   shippingFlat: moneyField,
   taxRatePercent: z.number().min(0, "Cannot be negative").max(99, "That is not a rate"),
+  codEnabled: z.boolean(),
+  /** Printed in the footer and on every invoice. Empty fields are left off. */
+  legalName: z.string().trim().max(120),
+  commercialRegister: z.string().trim().max(40),
+  taxRegistration: z.string().trim().max(40),
+  registeredAddress: z.string().trim().max(200),
 });
 
 export type StoreSettingsFormValues = z.infer<typeof storeSettingsFormSchema>;
 
+export const shippingRateRowSchema = z.object({
+  governorate: z.string().trim().min(2).max(60),
+  /** EGP, or null to fall back to the flat rate. */
+  rate: z.number().min(0, "Cannot be negative").max(10_000).nullable(),
+  deliveryDays: z.string().trim().max(30),
+});
+
+export const shippingRatesFormSchema = z.object({
+  rows: z.array(shippingRateRowSchema).max(40),
+});
+
+export type ShippingRatesFormValues = z.infer<typeof shippingRatesFormSchema>;
+
 export const discountFormSchema = z
   .object({
+    /** Blank for a code that never runs out. */
+    usageLimit: z.number().int().min(0).max(1_000_000),
+    oncePerCustomer: z.boolean(),
+    /** yyyy-mm-dd from a date input, or blank for no expiry. */
+    expiresOn: z.string().trim().max(10),
     code: z
       .string()
       .trim()
@@ -197,6 +224,7 @@ export const orderStatusFormSchema = z
   .object({
     status: z.enum([
       "pending",
+      "confirmed",
       "paid",
       "fulfilled",
       "delivered",

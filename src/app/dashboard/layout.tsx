@@ -20,7 +20,7 @@ export default async function DashboardLayout({
 
   return (
     <SessionProvider user={user}>
-      <div className="grid min-h-dvh bg-concrete lg:grid-cols-[230px_1fr]">
+      <div className="grid min-h-dvh bg-concrete lg:grid-cols-[230px_1fr] print:block print:bg-white">
         <DashboardSidebar user={user} />
         <div className="min-w-0">{children}</div>
       </div>

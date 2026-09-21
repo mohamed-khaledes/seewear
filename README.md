@@ -62,8 +62,10 @@ Migrations, in order:
 | `..._settings_and_discounts.sql` | store settings and discount codes |
 | `..._auth_hook.sql` | `custom_access_token_hook` — puts `user_role` in the JWT |
 | `..._fix_profile_column_guard.sql` | lets service-role writes set `role`/`is_demo` (the seed needs this) |
-| `..._order_status_delivered.sql` | adds `delivered` to the `order_status` enum |
+| `..._order_status_delivered.sql` | adds `confirmed` (cash on delivery) and `delivered` to `order_status` |
 | `..._order_tracking.sql` | courier columns on `orders`, the `order_events` trail and the trigger that writes it |
+| `..._commerce.sql` | pricing rules and per-governorate rates, cash on delivery, stock holds, expiry, refunds, invoice numbers, discount limits, addresses, reviews, stock alerts, the rate limiter |
+| `..._stats_include_delivered.sql` | revenue counts card orders once paid and cash orders once delivered |
 
 After the last one, switch the hook on in the Supabase dashboard:
 **Authentication → Hooks → Customize Access Token (JWT) Claims →
@@ -103,19 +105,38 @@ returns an error, and the `can_manage_store()` RLS policy rejects the write.
 
 ## How money and trust flow
 
-1. The browser sends **variant ids and quantities only** to `POST /api/checkout`.
-2. The server re-reads every price and stock level from the database, validates the
-   discount code, and computes subtotal, shipping, VAT and total itself
+1. The browser sends **variant ids, quantities, the address and a payment choice**
+   to `POST /api/checkout`. No price ever comes from the browser.
+2. The server reads the pricing rules from `store_settings` and `shipping_rates`,
+   re-reads every price and stock level, checks the discount code against its usage
+   limits, and computes subtotal, shipping for the governorate, VAT and total itself
    (`features/checkout/services/api/pricing.server.ts`).
-3. The order is written as `pending` with the service-role client, so guest checkout
-   works without any RLS hole.
-4. A Paymob intention is created and the customer goes to Unified Checkout.
-5. Paymob POSTs to `/api/paymob/webhook`. The HMAC is recomputed over the documented
-   field order with SHA-512; **a mismatch writes nothing**.
-6. On success, `apply_paid_order()` flips `pending → paid` and decrements stock in one
-   transaction. It returns `false` on a replay, so a repeated callback cannot
-   double-decrement or double-email.
+3. The order is written as `pending`, then `hold_order_stock()` takes its units out
+   of stock in one transaction — all of them or none. Two shoppers racing for the
+   last piece are now told at checkout, not after paying.
+4. **Cash on delivery:** the order becomes `confirmed`, gets its invoice number, and
+   the confirmation email goes straight away. The cash is recorded as a payment when
+   the order is marked delivered.
+5. **Card:** a Paymob intention is created and the customer goes to Unified Checkout.
+   Paymob POSTs to `/api/paymob/webhook`; the HMAC is recomputed over the documented
+   field order with SHA-512, and **a mismatch writes nothing**.
+6. On success, `apply_paid_order()` flips the order to `paid` without taking stock a
+   second time. It returns `false` on a replay, so a repeated callback cannot
+   double-apply or double-email. The webhook and the reconciliation job share one
+   code path for this, `settleTransaction`.
 7. Resend sends the confirmation.
+
+**When the callback never comes.** Three things ask Paymob directly, over its
+Transaction Inquiry API, with `PAYMOB_API_KEY`:
+
+- the redirect that brings the shopper back from Paymob;
+- the **Check with Paymob** button on a pending order in the dashboard;
+- `GET /api/cron/reconcile`, the scheduled sweep.
+
+Card checkouts left unpaid for an hour are expired and their stock goes back on sale.
+A payment that still arrives for an expired order completes it anyway, with a note on
+the order to check stock before packing — the customer's money moved, so the order
+follows it.
 
 The browser redirect never decides anything — it only picks which page the shopper
 lands on.
@@ -130,6 +151,7 @@ lands on.
 | `npm run build` | Production build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
+| `npm test` | Vitest: pricing, CSV, order rules, the Paymob HMAC, and every migration run against real Postgres |
 | `npm run art:generate` | Regenerate the placeholder garment SVGs |
 | `npm run db:push` | Apply migrations to the linked Supabase project |
 | `npm run db:types` | Regenerate `src/types/database.types.ts` |
@@ -372,6 +394,93 @@ session — right, and it used to leave guests with no way to follow a parcel.
 up server-side with the service-role key, and answers identically whichever one
 is wrong so the order-number sequence cannot be walked. It returns a narrower
 view than the account page: where the parcel is, not the address on the label.
+
+## Running the store
+
+### The scheduled sweep
+
+`GET /api/cron/reconcile` settles card orders whose Paymob callback never arrived,
+rescues expired orders that turn out to have been paid, gives back stock held by
+abandoned checkouts, emails back-in-stock alerts, and clears old rate-limit counters.
+It refuses every request unless `CRON_SECRET` is set and sent as a bearer token.
+
+`vercel.json` schedules it **once a day**, because that is the most the Vercel Hobby
+plan allows — a more frequent schedule fails the deploy. Checkout also expires
+abandoned card orders inline, so stock is never held for long either way. For a
+sweep every ten minutes, pick one:
+
+- **Vercel Pro** — change the schedule in `vercel.json` to `*/10 * * * *`.
+- **Supabase pg_cron**, free on every plan. Enable the `pg_cron` and `pg_net`
+  extensions, then run once in the SQL editor:
+
+  ```sql
+  select cron.schedule('seewear-reconcile', '*/10 * * * *', $
+    select net.http_get(
+      url := 'https://YOUR-DOMAIN/api/cron/reconcile',
+      headers := jsonb_build_object('Authorization', 'Bearer YOUR-CRON-SECRET')
+    );
+  $);
+  ```
+
+### Errors and alerts
+
+Every uncaught server error — page, route handler or server action — goes through
+`src/instrumentation.ts`, and every error screen a customer sees reports itself to
+`/api/errors`. Both write one JSON log line (search Vercel logs for
+`"level":"error"`) and, when `ERROR_WEBHOOK_URL` is set, post to a Slack or Discord
+incoming webhook. For stack traces grouped by release, Sentry is the next step up;
+it needs an account and a DSN.
+
+Vercel Analytics and Speed Insights are installed. Both are cookieless, so they need
+no consent banner, and both do nothing until the project is deployed on Vercel with
+Analytics switched on in the project settings.
+
+### Security headers
+
+`next.config.ts` enforces HSTS, `X-Frame-Options: DENY`, `nosniff`, a referrer policy
+and a permissions policy. The Content-Security-Policy ships as **Report-Only**: it
+logs violations to the browser console and blocks nothing. Before enforcing it, open
+a deployed build with the console open and walk through the shop, a Google sign-in,
+a Paymob payment and a 3D view. Once nothing is reported, rename the header to
+`Content-Security-Policy`.
+
+### Rate limits
+
+A fixed-window counter in Postgres (`hit_rate_limit`), because an in-memory limiter
+on serverless counts per instance. Limits live together in `src/lib/rate-limit.ts`:
+checkout, discount-code checks, order tracking (per address *and* per order number,
+so one order cannot be walked with guessed emails), the contact form, password
+resets, stock alerts, reviews and client error reports. It fails open: a database
+hiccup lets a request through and logs it rather than taking checkout down.
+
+### Backups and keys
+
+This is a runbook, not code — none of it can be done from the repository.
+
+- **Backups.** Supabase Pro takes a daily backup and keeps seven days. Point-in-time
+  recovery is a paid add-on and is off by default; switch it on before the store
+  takes real orders, because an order table restored to last night loses a day of
+  sales. Test a restore once, into a branch project, before you need one.
+- **Service-role key.** It bypasses every RLS policy. It lives only in Vercel's
+  environment variables and a password manager — never in the repository, a chat or
+  a client bundle. Rotate it in *Supabase → Project Settings → API* whenever someone
+  with access leaves, then update Vercel and redeploy.
+- **Paymob keys and HMAC secret.** Rotate in the Paymob dashboard. A new HMAC secret
+  must reach Vercel before Paymob starts signing with it, or every callback in
+  between is rejected; the reconciliation sweep recovers those orders afterwards.
+- **`CRON_SECRET`** — rotate by setting a new value in Vercel (and in the pg_cron
+  job, if you use one) and redeploying.
+
+### Legal identity
+
+The privacy policy, terms of sale and cookie page are written against what this
+codebase actually does. They are a starting point, not legal advice: have them read
+by an Egyptian lawyer before launch. Your commercial registration number, tax
+registration number and registered address are entered once in
+*Dashboard → Settings → Legal identity* and appear in the footer, the policies and
+every tax invoice. Egypt's Tax Authority also runs an e-receipt system for B2C sales;
+if your business is enrolled, invoices have to be submitted to it, which needs an
+integration this store does not have yet.
 
 ## Layout
 

@@ -2,4 +2,10 @@
 export { OrdersPage } from "./pages/orders-page";
 export { OrderDetailPage } from "./pages/order-detail-page";
 export { TrackOrderPage } from "./pages/track-order-page";
+export {
+  chargedTaxRate,
+  CustomerInvoicePage,
+  InvoiceToolbar,
+  sellerFromSettings,
+} from "./pages/invoice-page";
 export { getMyOrder, getMyOrders, trackOrder } from "./services/api/orders.server";

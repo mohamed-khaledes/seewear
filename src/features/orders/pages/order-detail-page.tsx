@@ -9,6 +9,7 @@ import { OrderTimeline } from "@/features/orders/components/order-timeline";
 import { getMyOrder } from "@/features/orders/services/api/orders.server";
 import {
   orderStatusMeta,
+  paymentMethodLabel,
   paymentStatus,
 } from "@/features/orders/services/utils/status";
 import { readShippingAddress } from "@/features/orders/types";
@@ -38,8 +39,16 @@ export async function OrderDetailPage({ orderNumber }: { orderNumber: string }) 
           <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
         </div>
         <p className="up-xs mt-2 text-grey-2">
-          Placed {formatDateTime(order.created_at)}
+          Placed {formatDateTime(order.created_at)} · {paymentMethodLabel[order.payment_method]}
         </p>
+        {order.invoice_number ? (
+          <Link
+            href={`/account/orders/${order.order_number}/invoice`}
+            className="up-xs mt-3 inline-block border-b border-ink pb-0.5 font-semibold"
+          >
+            Tax invoice {order.invoice_number}
+          </Link>
+        ) : null}
       </div>
 
       <div className="mx-auto grid max-w-5xl gap-5 px-5 py-8 lg:grid-cols-[1fr_320px] lg:px-6">
@@ -86,6 +95,7 @@ export async function OrderDetailPage({ orderNumber }: { orderNumber: string }) 
             <h2 className="up-sm mb-4 text-grey-2">Progress</h2>
             <OrderTimeline
               status={order.status}
+              paymentMethod={order.payment_method}
               events={order.events.map((event) => ({
                 status: event.status,
                 note: event.note,
@@ -154,6 +164,9 @@ export async function OrderDetailPage({ orderNumber }: { orderNumber: string }) 
                   {formatMoney(order.total_cents)}
                 </dd>
               </div>
+              {order.refunded_cents > 0 ? (
+                <Row label="Refunded to you" value={formatMoney(order.refunded_cents)} />
+              ) : null}
             </dl>
           </section>
 

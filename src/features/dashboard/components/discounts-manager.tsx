@@ -51,8 +51,8 @@ import {
 import {
   discountFormSchema,
   type DiscountFormValues,
+  type DiscountWithUsage,
 } from "@/features/dashboard/types";
-import type { Tables } from "@/types/database.types";
 
 const BLANK: DiscountFormValues = {
   code: "",
@@ -61,9 +61,12 @@ const BLANK: DiscountFormValues = {
   amountOff: 0,
   minSubtotal: 0,
   active: true,
+  usageLimit: 0,
+  oncePerCustomer: false,
+  expiresOn: "",
 };
 
-export function DiscountsManager({ codes }: { codes: Tables<"discount_codes">[] }) {
+export function DiscountsManager({ codes }: { codes: DiscountWithUsage[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -96,6 +99,8 @@ export function DiscountsManager({ codes }: { codes: Tables<"discount_codes">[] 
               <TableHead>Code</TableHead>
               <TableHead>Value</TableHead>
               <TableHead className="hidden sm:table-cell">Minimum spend</TableHead>
+              <TableHead>Used</TableHead>
+              <TableHead className="hidden lg:table-cell">Expires</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden md:table-cell">Created</TableHead>
               <TableHead />
@@ -112,7 +117,9 @@ export function DiscountsManager({ codes }: { codes: Tables<"discount_codes">[] 
   );
 }
 
-function DiscountRow({ code }: { code: Tables<"discount_codes"> }) {
+function DiscountRow({ code }: { code: DiscountWithUsage }) {
+  const expired = Boolean(code.expires_at && new Date(code.expires_at) < new Date());
+  const usedUp = code.usage_limit !== null && code.uses >= code.usage_limit;
   const router = useRouter();
   const { guard } = useDemoGuard();
   const [pending, startTransition] = useTransition();
@@ -142,9 +149,19 @@ function DiscountRow({ code }: { code: Tables<"discount_codes"> }) {
       <TableCell className="hidden sm:table-cell tabular-nums">
         {code.min_subtotal_cents === 0 ? "—" : formatMoney(code.min_subtotal_cents)}
       </TableCell>
+      <TableCell className="tabular-nums text-xs">
+        {code.uses}
+        {code.usage_limit !== null ? ` / ${code.usage_limit}` : ""}
+        {code.once_per_customer ? (
+          <span className="ml-1.5 text-grey">· once each</span>
+        ) : null}
+      </TableCell>
+      <TableCell className="hidden lg:table-cell text-xs text-grey-2">
+        {code.expires_at ? formatDate(code.expires_at) : "—"}
+      </TableCell>
       <TableCell>
-        <StatusPill tone={code.active ? "ok" : "mut"}>
-          {code.active ? "Active" : "Paused"}
+        <StatusPill tone={code.active && !expired && !usedUp ? "ok" : "mut"}>
+          {!code.active ? "Paused" : expired ? "Expired" : usedUp ? "Used up" : "Active"}
         </StatusPill>
       </TableCell>
       <TableCell className="hidden md:table-cell text-xs text-grey-2">
@@ -308,6 +325,56 @@ function DiscountForm({ onDone }: { onDone: () => void }) {
                 />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="usageLimit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="up-xs text-grey-2">Total uses</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="h-11 tabular-nums"
+                    placeholder="Unlimited"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(event) => field.onChange(event.target.valueAsNumber || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="expiresOn"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="up-xs text-grey-2">Last day valid</FormLabel>
+                <FormControl>
+                  <Input type="date" className="h-11" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="oncePerCustomer"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between gap-3">
+              <FormLabel className="up-xs text-grey-2">Once per customer</FormLabel>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
             </FormItem>
           )}
         />

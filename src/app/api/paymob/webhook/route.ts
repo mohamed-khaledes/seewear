@@ -1,22 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { siteConfig } from "@/config/site";
-import { sendOrderConfirmation } from "@/lib/email";
-import { verifyTransactionHmac } from "@/lib/paymob";
+import { isInquiryConfigured, verifyTransactionHmac } from "@/lib/paymob";
 import type { PaymobCallbackBody, PaymobTransaction } from "@/lib/paymob";
 import { createAdminClient, type SupabaseAdminClient } from "@/lib/supabase/admin";
 import { isServiceRoleConfigured } from "@/lib/supabase/config";
-import type { Json } from "@/types/database.types";
+import {
+  reconcileOrderNumber,
+  settleTransaction,
+  type SettledOrder,
+} from "@/features/checkout/server";
 
 export const dynamic = "force-dynamic";
 
 /**
- * The only place an order may become `paid`.
+ * Where an order becomes `paid` when Paymob tells us so.
  *
  * Paymob posts the transaction here and also sends the customer's browser here
  * on redirect. The POST is the trust boundary: the HMAC is recomputed from the
- * transaction fields and nothing is written unless it matches. The GET only
- * decides which page the shopper lands on.
+ * transaction fields and nothing is written unless it matches. What a verified
+ * transaction means is decided in `settleTransaction`, shared with the
+ * reconciliation job so the two can never disagree.
  */
 export async function POST(request: NextRequest) {
   if (!isServiceRoleConfigured()) {
@@ -53,78 +57,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true, matched: false });
   }
 
-  const succeeded = transaction.success === true && transaction.pending !== true;
-  const refunded = transaction.is_refunded === true;
-
-  const status = refunded
-    ? "refunded"
-    : succeeded
-      ? "success"
-      : transaction.pending === true
-        ? "pending"
-        : "declined";
-
-  // The unique index on (provider, transaction_id) makes replays idempotent.
-  const { error: paymentError } = await admin.from("payments").upsert(
-    {
-      order_id: order.id,
-      provider: "paymob",
-      paymob_order_id: String(transaction.order?.id ?? ""),
-      transaction_id: String(transaction.id),
-      method: describeMethod(transaction),
-      amount_cents: Number(transaction.amount_cents) || order.total_cents,
-      status,
-      hmac_verified: true,
-      raw: transaction as unknown as Json,
-    },
-    { onConflict: "provider,transaction_id" },
-  );
-
-  if (paymentError) {
-    console.error("[paymob] payment upsert failed", paymentError);
-    return NextResponse.json({ error: "payment write failed" }, { status: 500 });
-  }
-
-  if (refunded) {
-    await admin.from("orders").update({ status: "refunded" }).eq("id", order.id);
-    return NextResponse.json({ received: true, status: "refunded" });
-  }
-
-  if (!succeeded) {
-    if (transaction.pending !== true) {
-      console.warn(
-        `[paymob] transaction ${transaction.id} declined for ${order.order_number}`,
-      );
+  try {
+    const outcome = await settleTransaction(admin, order, transaction, "callback");
+    if (outcome === "declined") {
+      console.warn(`[paymob] transaction ${transaction.id} declined for ${order.order_number}`);
     }
-    return NextResponse.json({ received: true, status });
+    return NextResponse.json({ received: true, status: outcome });
+  } catch (error) {
+    console.error("[paymob] could not settle transaction", error);
+    // 500 so Paymob retries: every step of settling is idempotent.
+    return NextResponse.json({ error: "could not apply transaction" }, { status: 500 });
   }
-
-  // Atomic: flips pending → paid and decrements stock, exactly once.
-  const { data: applied, error: applyError } = await admin.rpc("apply_paid_order", {
-    p_order_id: order.id,
-  });
-
-  if (applyError) {
-    console.error("[paymob] apply_paid_order failed", applyError);
-    return NextResponse.json({ error: "could not apply order" }, { status: 500 });
-  }
-
-  if (applied) {
-    await emailConfirmation(admin, order.id);
-  }
-
-  return NextResponse.json({ received: true, status: "paid", applied: Boolean(applied) });
 }
 
 /**
  * The customer's browser lands here after paying. The database truth comes from
  * the POST above — this only picks a page.
+ *
+ * With inquiry credentials it also asks Paymob directly before redirecting. If
+ * the callback is late or lost, that is the difference between the shopper
+ * seeing "paid" and seeing "confirming payment" forever. The redirect's own
+ * `success` parameter is never trusted for anything but the choice of page.
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const success = params.get("success") === "true";
   const orderNumber =
     params.get("merchant_order_id") ?? params.get("special_reference") ?? "";
+
+  if (orderNumber && isServiceRoleConfigured() && isInquiryConfigured()) {
+    await Promise.race([
+      reconcileOrderNumber(createAdminClient(), orderNumber).catch((error) =>
+        console.error("[paymob] redirect reconciliation failed", error),
+      ),
+      // Never hold the shopper on a blank page waiting for Paymob.
+      new Promise((resolve) => setTimeout(resolve, 4000)),
+    ]);
+  }
 
   const destination = new URL(
     success ? "/checkout/success" : "/checkout/failed",
@@ -140,8 +109,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.redirect(destination);
 }
 
-type MatchedOrder = { id: string; order_number: string; total_cents: number };
-
 /**
  * Paymob echoes our `special_reference` back as `merchant_order_id`. We fall
  * back to the Paymob order id we saved when the intention was created.
@@ -149,7 +116,7 @@ type MatchedOrder = { id: string; order_number: string; total_cents: number };
 async function findOrder(
   admin: SupabaseAdminClient,
   transaction: PaymobTransaction,
-): Promise<MatchedOrder | null> {
+): Promise<SettledOrder | null> {
   const reference =
     (transaction.order?.merchant_order_id as string | undefined) ??
     (typeof transaction.extras === "object" && transaction.extras !== null
@@ -158,10 +125,12 @@ async function findOrder(
           | undefined)
       : undefined);
 
+  const columns = "id, order_number, total_cents, refunded_cents";
+
   if (reference) {
     const { data } = await admin
       .from("orders")
-      .select("id, order_number, total_cents")
+      .select(columns)
       .eq("order_number", reference)
       .maybeSingle();
     if (data) return data;
@@ -171,73 +140,12 @@ async function findOrder(
   if (paymobOrderId !== undefined && paymobOrderId !== null) {
     const { data } = await admin
       .from("payments")
-      .select("order:orders(id, order_number, total_cents)")
+      .select(`order:orders(${columns})`)
       .eq("paymob_order_id", String(paymobOrderId))
       .limit(1)
-      .maybeSingle<{ order: MatchedOrder | null }>();
+      .maybeSingle<{ order: SettledOrder | null }>();
     if (data?.order) return data.order;
   }
 
   return null;
-}
-
-function describeMethod(transaction: PaymobTransaction): string {
-  const source = transaction.source_data;
-  if (!source) return "Card";
-
-  const type = source.sub_type ?? source.type ?? "Card";
-  const pan = source.pan;
-
-  return pan ? `${type} •••• ${String(pan).slice(-4)}` : String(type);
-}
-
-async function emailConfirmation(admin: SupabaseAdminClient, orderId: string) {
-  const { data: order, error } = await admin
-    .from("orders")
-    .select(
-      `order_number, email, subtotal_cents, discount_cents, shipping_cents,
-       tax_cents, total_cents, shipping_address,
-       items:order_items(name, color, size, quantity, price_cents)`,
-    )
-    .eq("id", orderId)
-    .maybeSingle<{
-      order_number: string;
-      email: string;
-      subtotal_cents: number;
-      discount_cents: number;
-      shipping_cents: number;
-      tax_cents: number;
-      total_cents: number;
-      shipping_address: Record<string, string> | null;
-      items: {
-        name: string;
-        color: string | null;
-        size: string | null;
-        quantity: number;
-        price_cents: number;
-      }[];
-    }>();
-
-  if (error || !order) {
-    console.error("[paymob] could not load order for confirmation email", error);
-    return;
-  }
-
-  await sendOrderConfirmation({
-    orderNumber: order.order_number,
-    email: order.email,
-    lines: order.items.map((item) => ({
-      name: item.name,
-      color: item.color,
-      size: item.size,
-      quantity: item.quantity,
-      priceCents: item.price_cents,
-    })),
-    subtotalCents: order.subtotal_cents,
-    discountCents: order.discount_cents,
-    shippingCents: order.shipping_cents,
-    taxCents: order.tax_cents,
-    totalCents: order.total_cents,
-    shippingAddress: order.shipping_address ?? {},
-  });
 }

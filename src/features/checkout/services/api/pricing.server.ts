@@ -1,5 +1,6 @@
 import "server-only";
 
+import { DEFAULT_PRICING_RULES, type PricingRules } from "@/lib/pricing";
 import type { SupabaseAdminClient } from "@/lib/supabase/admin";
 import { computeTotals } from "@/features/cart/services/utils/totals";
 import type { CartLineInput, CartTotals, PricedCartLine } from "@/features/cart/types";
@@ -8,6 +9,8 @@ export type RepricedCart = {
   lines: PricedCartLine[];
   totals: CartTotals;
   discount: { code: string; cents: number } | null;
+  /** Why a submitted code was turned down, in words a shopper can act on. */
+  discountRejection: string | null;
 };
 
 export class CheckoutError extends Error {
@@ -36,16 +39,27 @@ type VariantRow = {
   } | null;
 };
 
+export type RepriceOptions = {
+  rules?: PricingRules;
+  /** Unknown until the address form is filled; the flat rate applies until then. */
+  governorate?: string | null;
+  /** Needed to enforce once-per-customer codes. */
+  email?: string | null;
+  userId?: string | null;
+};
+
 /**
- * Rebuilds the cart from the database: every price, every stock level and the
- * discount are read server-side. The browser only ever says which variants and
- * how many.
+ * Rebuilds the cart from the database: every price, every stock level, the
+ * shipping rate for the governorate and the discount are read server-side. The
+ * browser only ever says which variants and how many.
  */
 export async function repriceCart(
   admin: SupabaseAdminClient,
   items: CartLineInput[],
   discountCode?: string,
+  options: RepriceOptions = {},
 ): Promise<RepricedCart> {
+  const rules = options.rules ?? DEFAULT_PRICING_RULES;
   const wanted = new Map<string, number>();
   for (const item of items) {
     wanted.set(item.variantId, (wanted.get(item.variantId) ?? 0) + item.quantity);
@@ -109,14 +123,20 @@ export async function repriceCart(
     throw new CheckoutError("Your bag is empty.");
   }
 
-  const discount = discountCode
-    ? await resolveDiscount(admin, discountCode, sumSubtotal(lines))
-    : null;
+  let discount: RepricedCart["discount"] = null;
+  let discountRejection: string | null = null;
+
+  if (discountCode?.trim()) {
+    const verdict = await evaluateDiscount(admin, discountCode, sumSubtotal(lines), options);
+    if (verdict.ok) discount = { code: verdict.code, cents: verdict.cents };
+    else discountRejection = verdict.reason;
+  }
 
   return {
     lines,
-    totals: computeTotals(lines, discount?.cents ?? 0),
+    totals: computeTotals(lines, discount?.cents ?? 0, rules, options.governorate),
     discount,
+    discountRejection,
   };
 }
 
@@ -124,31 +144,97 @@ function sumSubtotal(lines: PricedCartLine[]): number {
   return lines.reduce((total, line) => total + line.priceCents * line.quantity, 0);
 }
 
-/** Validates a discount code against the database. Unknown codes are ignored. */
-export async function resolveDiscount(
+type DiscountVerdict =
+  | { ok: true; code: string; cents: number }
+  | { ok: false; reason: string };
+
+/**
+ * Validates a code against the database, including how often it has been used.
+ *
+ * A use is any order carrying the code that has not been cancelled — pending
+ * included. That mirrors the stock hold: an unpaid checkout keeps its claim
+ * until the expiry job releases it, so a limited code cannot be spent twice by
+ * two checkouts racing each other through Paymob.
+ */
+export async function evaluateDiscount(
   admin: SupabaseAdminClient,
   code: string,
   subtotalCents: number,
-): Promise<{ code: string; cents: number } | null> {
+  options: Pick<RepriceOptions, "email" | "userId"> = {},
+): Promise<DiscountVerdict> {
   const trimmed = code.trim();
-  if (!trimmed) return null;
+  const unknown = { ok: false as const, reason: "That code is not valid." };
+  if (!trimmed) return unknown;
 
   const { data, error } = await admin
     .from("discount_codes")
-    .select("code, percent_off, amount_off_cents, min_subtotal_cents, active, expires_at")
+    .select(
+      "code, percent_off, amount_off_cents, min_subtotal_cents, active, expires_at, usage_limit, once_per_customer",
+    )
     .eq("code", trimmed)
     .maybeSingle();
 
-  if (error || !data) return null;
-  if (!data.active) return null;
-  if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
-  if (subtotalCents < data.min_subtotal_cents) return null;
+  if (error || !data || !data.active) return unknown;
+
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    return { ok: false, reason: "That code has expired." };
+  }
+
+  if (subtotalCents < data.min_subtotal_cents) {
+    return {
+      ok: false,
+      reason: `That code needs a bag of at least EGP ${(data.min_subtotal_cents / 100).toLocaleString("en-EG")}.`,
+    };
+  }
+
+  if (data.usage_limit !== null) {
+    const { count } = await admin
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("discount_code", data.code)
+      .neq("status", "cancelled");
+
+    if ((count ?? 0) >= data.usage_limit) {
+      return { ok: false, reason: "That code has been used up." };
+    }
+  }
+
+  if (data.once_per_customer && (options.email || options.userId)) {
+    // Two plain filters rather than one `or()` string: an email is user input,
+    // and building a filter expression out of it invites quoting bugs.
+    const used = (column: "email" | "user_id", value: string) =>
+      admin
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("discount_code", data.code)
+        .neq("status", "cancelled")
+        .eq(column, value);
+
+    const [byEmail, byUser] = await Promise.all([
+      options.email ? used("email", options.email.trim()) : null,
+      options.userId ? used("user_id", options.userId) : null,
+    ]);
+
+    if ((byEmail?.count ?? 0) > 0 || (byUser?.count ?? 0) > 0) {
+      return { ok: false, reason: "You have already used that code." };
+    }
+  }
 
   const cents = data.percent_off
     ? Math.round((subtotalCents * data.percent_off) / 100)
     : (data.amount_off_cents ?? 0);
 
-  if (cents <= 0) return null;
+  if (cents <= 0) return unknown;
 
-  return { code: data.code, cents: Math.min(cents, subtotalCents) };
+  return { ok: true, code: data.code, cents: Math.min(cents, subtotalCents) };
+}
+
+/** Kept for callers that only need the amount. */
+export async function resolveDiscount(
+  admin: SupabaseAdminClient,
+  code: string,
+  subtotalCents: number,
+): Promise<{ code: string; cents: number } | null> {
+  const verdict = await evaluateDiscount(admin, code, subtotalCents);
+  return verdict.ok ? { code: verdict.code, cents: verdict.cents } : null;
 }

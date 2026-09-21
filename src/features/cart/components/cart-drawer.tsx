@@ -19,9 +19,9 @@ import { useUiStore } from "@/stores/ui-store";
 export function CartDrawer() {
   const open = useUiStore((state) => state.cartDrawerOpen);
   const setOpen = useUiStore((state) => state.setCartDrawerOpen);
-  const { items, totals, setQuantity, removeItem, hydrated } = useCart();
+  const { items, totals, rules, setQuantity, removeItem, hydrated } = useCart();
 
-  const remaining = amountToFreeShipping(totals.subtotalCents);
+  const remaining = amountToFreeShipping(totals.subtotalCents, rules);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

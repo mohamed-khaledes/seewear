@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { helpTopics, siteConfig } from "@/config/site";
+import { helpTopics, siteConfig, type NavLink } from "@/config/site";
 import { cn } from "@/lib/utils";
 
 /**
@@ -11,16 +11,25 @@ import { cn } from "@/lib/utils";
  * `usePathname` — it is what marks the current topic, and doing it here keeps
  * every help page itself a server component.
  */
-export function HelpShell({ children }: { children: React.ReactNode }) {
+export function HelpShell({
+  children,
+  topics = helpTopics,
+  heading = "Help",
+}: {
+  children: React.ReactNode;
+  /** The legal pages reuse this chrome with their own list. */
+  topics?: NavLink[];
+  heading?: string;
+}) {
   const pathname = usePathname();
 
   return (
     <div className="grid gap-8 lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10">
-      <nav aria-label="Help topics" className="lg:sticky lg:top-24 lg:self-start">
-        <p className="up-xs mb-3 text-grey-2">Help</p>
+      <nav aria-label={`${heading} topics`} className="lg:sticky lg:top-24 lg:self-start">
+        <p className="up-xs mb-3 text-grey-2">{heading}</p>
 
         <ul className="flex flex-wrap gap-x-2 gap-y-2 lg:block lg:space-y-0.5">
-          {helpTopics.map((topic) => {
+          {topics.map((topic) => {
             const current = pathname === topic.href;
             return (
               <li key={topic.href}>

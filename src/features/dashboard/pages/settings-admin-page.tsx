@@ -10,11 +10,18 @@ import {
 import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topbar";
 import { EmptyPanelState } from "@/features/dashboard/components/panel";
 import { SettingsForm } from "@/features/dashboard/components/settings-form";
-import { getAdminStoreSettings } from "@/features/dashboard/services/api/dashboard.server";
+import { ShippingRatesEditor } from "@/features/dashboard/components/shipping-rates-editor";
+import {
+  getAdminShippingRates,
+  getAdminStoreSettings,
+} from "@/features/dashboard/services/api/dashboard.server";
 import type { StoreSettingsFormValues } from "@/features/dashboard/types";
 
 export async function SettingsAdminPage({ isDemo }: { isDemo: boolean }) {
-  const settings = await getAdminStoreSettings();
+  const [settings, rates] = await Promise.all([
+    getAdminStoreSettings(),
+    getAdminShippingRates(),
+  ]);
 
   if (!settings) {
     return (
@@ -41,6 +48,11 @@ export async function SettingsAdminPage({ isDemo }: { isDemo: boolean }) {
     ),
     shippingFlat: toEgp(settings.shipping_flat_cents ?? SHIPPING_FLAT_CENTS),
     taxRatePercent: Number(((settings.tax_rate ?? TAX_RATE) * 100).toFixed(2)),
+    codEnabled: settings.cod_enabled ?? true,
+    legalName: settings.legal_name ?? "",
+    commercialRegister: settings.commercial_register ?? "",
+    taxRegistration: settings.tax_registration ?? "",
+    registeredAddress: settings.registered_address ?? "",
   };
 
   return (
@@ -50,8 +62,12 @@ export async function SettingsAdminPage({ isDemo }: { isDemo: boolean }) {
         subtitle={isDemo ? "Demo session — changes are disabled" : "Store configuration"}
       />
 
-      <div className="px-5 py-6 lg:px-8">
+      <div className="grid gap-4 px-5 py-6 lg:px-8">
         <SettingsForm defaultValues={defaultValues} />
+        <ShippingRatesEditor
+          rates={rates}
+          flatCents={settings.shipping_flat_cents ?? SHIPPING_FLAT_CENTS}
+        />
       </div>
     </>
   );

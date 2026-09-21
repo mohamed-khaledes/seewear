@@ -49,7 +49,7 @@ export function DashboardSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 z-30 flex flex-row flex-wrap items-center gap-1 bg-ink px-3.5 py-3.5 text-white lg:h-dvh lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-0 lg:px-0 lg:py-5.5">
+    <aside data-chrome className="sticky top-0 z-30 flex flex-row flex-wrap items-center gap-1 bg-ink px-3.5 py-3.5 text-white lg:h-dvh lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-0 lg:px-0 lg:py-5.5">
       <Link
         href="/"
         className="px-3 text-[15px] font-bold uppercase tracking-[0.3em] lg:px-6 lg:pb-6.5 lg:pt-1.5"

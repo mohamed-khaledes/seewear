@@ -4,10 +4,12 @@ import { Heart, LayoutDashboard, Package } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { AddressBook } from "@/features/auth/components/address-book";
 import { ProfileForm } from "@/features/auth/components/profile-form";
+import { getMyAddresses } from "@/features/auth/services/api/addresses.server";
 import { getSessionUser } from "@/features/auth/services/api/session.server";
 
-export async function AccountPage() {
+export async function AccountPage({ passwordUpdated = false }: { passwordUpdated?: boolean }) {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/account");
 
@@ -21,6 +23,8 @@ export async function AccountPage() {
       .maybeSingle();
     phone = data?.phone ?? "";
   }
+
+  const addresses = await getMyAddresses();
 
   return (
     <div className="bg-concrete">
@@ -37,6 +41,12 @@ export async function AccountPage() {
       </div>
 
       <div className="mx-auto grid max-w-4xl gap-5 px-5 py-8 lg:px-6">
+        {passwordUpdated ? (
+          <p className="border border-ok/30 bg-ok-bg px-4 py-3 text-sm text-ok">
+            Password changed. Use the new one next time you sign in.
+          </p>
+        ) : null}
+
         <nav className="grid gap-px bg-line sm:grid-cols-3">
           <AccountLink href="/account/orders" icon={<Package className="size-4" />}>
             Orders
@@ -65,6 +75,8 @@ export async function AccountPage() {
             defaultValues={{ fullName: user.fullName ?? "", phone }}
           />
         </section>
+
+        <AddressBook addresses={addresses} />
       </div>
     </div>
   );

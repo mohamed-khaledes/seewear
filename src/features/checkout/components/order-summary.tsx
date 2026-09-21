@@ -7,6 +7,7 @@ import { ProductShot } from "@/components/common/product-shot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/utils";
+import { formatTaxRate, type PricingRules } from "@/lib/pricing";
 import { computeTotals } from "@/features/cart/services/utils/totals";
 import type { CartLine } from "@/features/cart/types";
 import { previewDiscount } from "@/features/checkout/services/api/discount-actions";
@@ -15,17 +16,24 @@ import type { DiscountPreview } from "@/features/checkout/types";
 export function OrderSummary({
   items,
   discount,
+  rules,
+  governorate,
+  email,
   onDiscountChange,
 }: {
   items: CartLine[];
   discount: DiscountPreview | null;
+  rules: PricingRules;
+  /** Empty until the address form has one; shipping is the flat estimate until then. */
+  governorate: string;
+  email: string;
   onDiscountChange: (discount: DiscountPreview | null) => void;
 }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const totals = computeTotals(items, discount?.discountCents ?? 0);
+  const totals = computeTotals(items, discount?.discountCents ?? 0, rules, governorate);
 
   function apply(event: React.FormEvent) {
     event.preventDefault();
@@ -35,6 +43,7 @@ export function OrderSummary({
       const result = await previewDiscount(
         code,
         items.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
+        email,
       );
 
       if (result.ok) {
@@ -123,10 +132,10 @@ export function OrderSummary({
           <Row label="Discount" value={`-${formatMoney(totals.discountCents)}`} accent />
         ) : null}
         <Row
-          label="Shipping (Express)"
+          label={governorate ? `Shipping to ${governorate}` : "Shipping (estimate)"}
           value={totals.shippingCents === 0 ? "Free" : formatMoney(totals.shippingCents)}
         />
-        <Row label="VAT (14%)" value={formatMoney(totals.taxCents)} />
+        <Row label={`VAT (${formatTaxRate(rules)})`} value={formatMoney(totals.taxCents)} />
         <div className="mt-2 flex items-baseline justify-between border-t border-line pt-4">
           <dt className="text-base font-bold">Total</dt>
           <dd className="text-lg font-bold tabular-nums">

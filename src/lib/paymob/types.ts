@@ -91,3 +91,6 @@ export type PaymobCallbackBody = {
   hmac?: string;
   [key: string]: unknown;
 };
+
+/** `POST /api/auth/tokens` — the legacy API key exchanged for a 60-minute token. */
+export type PaymobAuthTokenResponse = { token?: string; [key: string]: unknown };

@@ -12,6 +12,7 @@ import type {
   AdminProductRow,
   CategoryRow,
   CustomerRow,
+  DiscountWithUsage,
   DashboardStats,
   PaymentRow,
   PaymentsSummary,
@@ -268,6 +269,7 @@ export async function getAdminOrders(
 
   const ORDER_STATUSES = [
     "pending",
+    "confirmed",
     "paid",
     "fulfilled",
     "delivered",
@@ -276,9 +278,10 @@ export async function getAdminOrders(
   ] as const satisfies readonly Enums<"order_status">[];
 
   if (status && status !== "all") {
-    // "unfulfilled" is a view over paid-but-not-shipped, not a stored status.
+    // "unfulfilled" is a view — paid by card or confirmed for cash, not yet
+    // shipped — not a stored status.
     if (status === "unfulfilled") {
-      query = query.eq("status", "paid");
+      query = query.in("status", ["paid", "confirmed"]);
     } else if ((ORDER_STATUSES as readonly string[]).includes(status)) {
       query = query.eq("status", status as Enums<"order_status">);
     }
@@ -320,6 +323,7 @@ export async function getAdminOrderCounts(): Promise<Record<string, number>> {
   const supabase = await createClient();
   const statuses: Enums<"order_status">[] = [
     "pending",
+    "confirmed",
     "paid",
     "fulfilled",
     "delivered",
@@ -338,8 +342,8 @@ export async function getAdminOrderCounts(): Promise<Record<string, number>> {
   statuses.forEach((status, index) => {
     counts[status] = perStatus[index].count ?? 0;
   });
-  // "unfulfilled" is the paid-but-not-shipped view, not a stored status.
-  counts.unfulfilled = counts.paid ?? 0;
+  // "unfulfilled" is the ready-to-ship view, not a stored status.
+  counts.unfulfilled = (counts.paid ?? 0) + (counts.confirmed ?? 0);
   return counts;
 }
 
@@ -409,7 +413,7 @@ export async function getCustomers(
     if (!order.user_id) continue;
     // Delivered counts too, or lifetime value would fall the moment a parcel
     // actually arrived.
-    if (!["paid", "fulfilled", "delivered"].includes(order.status)) continue;
+    if (!["confirmed", "paid", "fulfilled", "delivered"].includes(order.status)) continue;
     const entry = totals.get(order.user_id) ?? { count: 0, cents: 0 };
     entry.count += 1;
     entry.cents += order.total_cents;
@@ -498,17 +502,33 @@ export async function getAdminStoreSettings(): Promise<Tables<"store_settings"> 
   return data;
 }
 
-export async function getDiscounts(): Promise<Tables<"discount_codes">[]> {
+export async function getDiscounts(): Promise<DiscountWithUsage[]> {
   if (!isSupabaseConfigured()) return [];
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("discount_codes")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [codes, used] = await Promise.all([
+    supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
+    // One narrow column across discounted orders, counted here — the same
+    // definition of a use that checkout enforces.
+    supabase
+      .from("orders")
+      .select("discount_code")
+      .not("discount_code", "is", null)
+      .neq("status", "cancelled"),
+  ]);
 
-  if (error) throw error;
-  return data ?? [];
+  if (codes.error) throw codes.error;
+
+  const uses = new Map<string, number>();
+  for (const order of used.data ?? []) {
+    const key = String(order.discount_code).toUpperCase();
+    uses.set(key, (uses.get(key) ?? 0) + 1);
+  }
+
+  return (codes.data ?? []).map((code) => ({
+    ...code,
+    uses: uses.get(code.code.toUpperCase()) ?? 0,
+  }));
 }
 
 export async function getAdminCategories(): Promise<
@@ -569,5 +589,82 @@ export async function getAdminCategoryRows(): Promise<{
       active_count: counts.get(category.id)?.active ?? 0,
     })),
     uncategorised,
+  };
+}
+
+export async function getAdminShippingRates(): Promise<
+  { governorate: string; rate_cents: number; delivery_days: string | null }[]
+> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("shipping_rates")
+    .select("governorate, rate_cents, delivery_days");
+
+  // Missing before the commerce migration is pushed: no regional rates yet.
+  if (error) return [];
+  return data ?? [];
+}
+
+export type CustomerDetail = {
+  profile: Tables<"profiles">;
+  email: string | null;
+  lastSignIn: string | null;
+  orders: Pick<
+    Tables<"orders">,
+    "id" | "order_number" | "status" | "payment_method" | "total_cents" | "refunded_cents" | "created_at"
+  >[];
+  addresses: Tables<"addresses">[];
+  lifetimeCents: number;
+  orderCount: number;
+};
+
+/**
+ * One customer in full: their profile, every order they placed signed in or
+ * as a guest with the same email, and their saved addresses. Email lives in
+ * auth.users, so this needs the service role — it sits behind the admin-only
+ * layout like the customer list does.
+ */
+export async function getCustomer(id: string): Promise<CustomerDetail | null> {
+  if (!isServiceRoleConfigured()) return null;
+
+  const admin = createAdminClient();
+  const [{ data: profile }, { data: authUser }] = await Promise.all([
+    admin.from("profiles").select("*").eq("id", id).maybeSingle(),
+    admin.auth.admin.getUserById(id),
+  ]);
+
+  if (!profile) return null;
+  const email = authUser?.user?.email ?? null;
+
+  const columns = "id, order_number, status, payment_method, total_cents, refunded_cents, created_at";
+  const [byUser, byEmail, addresses] = await Promise.all([
+    admin.from("orders").select(columns).eq("user_id", id),
+    // Guest orders placed before they made an account are still theirs.
+    email
+      ? admin.from("orders").select(columns).is("user_id", null).eq("email", email)
+      : Promise.resolve({ data: [] as CustomerDetail["orders"] }),
+    admin.from("addresses").select("*").eq("user_id", id).order("is_default", { ascending: false }),
+  ]);
+
+  const orders = [...(byUser.data ?? []), ...(byEmail.data ?? [])].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at),
+  );
+
+  const earned = orders.filter((order) =>
+    order.payment_method === "cod"
+      ? order.status === "delivered"
+      : ["paid", "fulfilled", "delivered"].includes(order.status),
+  );
+
+  return {
+    profile,
+    email,
+    lastSignIn: authUser?.user?.last_sign_in_at ?? null,
+    orders,
+    addresses: addresses.data ?? [],
+    lifetimeCents: earned.reduce((sum, order) => sum + order.total_cents - order.refunded_cents, 0),
+    orderCount: earned.length,
   };
 }

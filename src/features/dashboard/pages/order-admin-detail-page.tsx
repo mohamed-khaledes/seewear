@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ChevronLeft, FileText, Package, ShieldCheck, ShieldAlert } from "lucide-react";
 
 import { ProductShot } from "@/components/common/product-shot";
 import { StatusPill } from "@/components/common/status-pill";
 import { formatDateTime, formatMoney } from "@/lib/utils";
-import { orderStatusMeta, paymentStatus, readShippingAddress } from "@/features/orders";
+import {
+  orderStatusMeta,
+  paymentMethodLabel,
+  paymentStatus,
+  readShippingAddress,
+} from "@/features/orders";
 import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topbar";
 import { OrderActions } from "@/features/dashboard/components/order-actions";
 import { OrderStatusForm } from "@/features/dashboard/components/order-status-form";
@@ -23,24 +28,47 @@ export async function OrderAdminDetailPage({ orderId }: { orderId: string }) {
     <>
       <DashboardTopbar
         title={order.order_number}
-        subtitle={`Placed ${formatDateTime(order.created_at)}`}
+        subtitle={`Placed ${formatDateTime(order.created_at)} · ${paymentMethodLabel[order.payment_method]}`}
         actions={
           <OrderActions
             orderId={order.id}
             status={order.status}
+            paymentMethod={order.payment_method}
             totalCents={order.total_cents}
+            refundedCents={order.refunded_cents}
+            stockHeld={order.stock_held}
           />
         }
       />
 
       <div className="px-5 py-6 lg:px-8">
-        <Link
-          href="/dashboard/orders"
-          className="up-xs mb-5 inline-flex items-center gap-1 text-grey-2 transition-colors hover:text-ink"
-        >
-          <ChevronLeft className="size-3" />
-          All orders
-        </Link>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/dashboard/orders"
+            className="up-xs inline-flex items-center gap-1 text-grey-2 transition-colors hover:text-ink"
+          >
+            <ChevronLeft className="size-3" />
+            All orders
+          </Link>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href={`/dashboard/orders/${order.id}/packing-slip`}
+              className="up-xs inline-flex items-center gap-1.5 text-grey-2 transition-colors hover:text-ink"
+            >
+              <Package className="size-3.5" />
+              Packing slip
+            </Link>
+            {order.invoice_number ? (
+              <Link
+                href={`/dashboard/orders/${order.id}/invoice`}
+                className="up-xs inline-flex items-center gap-1.5 text-grey-2 transition-colors hover:text-ink"
+              >
+                <FileText className="size-3.5" />
+                Invoice {order.invoice_number}
+              </Link>
+            ) : null}
+          </div>
+        </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
           <div className="grid gap-4">
@@ -216,6 +244,15 @@ export async function OrderAdminDetailPage({ orderId }: { orderId: string }) {
                     {formatMoney(order.total_cents)}
                   </dd>
                 </div>
+                {order.refunded_cents > 0 ? (
+                  <Row label="Refunded" value={`-${formatMoney(order.refunded_cents)}`} />
+                ) : null}
+                <Row label="Payment" value={paymentMethodLabel[order.payment_method]} />
+                {order.restocked_at ? (
+                  <p className="up-xs text-grey">
+                    Stock returned {formatDateTime(order.restocked_at)}
+                  </p>
+                ) : null}
               </dl>
             </Panel>
 

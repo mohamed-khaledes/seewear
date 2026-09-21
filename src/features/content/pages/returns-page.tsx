@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { siteConfig } from "@/config/site";
 import { formatMoney } from "@/lib/utils";
-import { SHIPPING_FLAT_CENTS } from "@/config/constants";
+import { getPricingRules } from "@/lib/store-settings";
 import { ContentHero } from "@/features/content/components/content-hero";
 import {
   Callout,
@@ -14,7 +14,9 @@ import {
 } from "@/features/content/components/content-blocks";
 import { HelpShell } from "@/features/content/components/help-shell";
 
-export function ReturnsPage() {
+export async function ReturnsPage() {
+  const rules = await getPricingRules();
+
   return (
     <>
       <ContentHero
@@ -35,7 +37,7 @@ export function ReturnsPage() {
                 {
                   label: "Return shipping",
                   note: "Deducted from the refund unless the fault is ours",
-                  value: formatMoney(SHIPPING_FLAT_CENTS),
+                  value: formatMoney(rules.shippingFlatCents),
                 },
                 { label: "Refund lands in", note: "After we receive and check the parcel", value: "5–10 days" },
               ]}

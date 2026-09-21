@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { Tables } from "@/types/database.types";
-import type { OrderStatus } from "@/features/orders/services/utils/status";
+import type { OrderStatus, PaymentMethod } from "@/features/orders/services/utils/status";
 
 export type OrderRow = Tables<"orders">;
 export type OrderItemRow = Tables<"order_items">;
@@ -63,6 +63,7 @@ export type TrackOrderValues = z.infer<typeof trackOrderSchema>;
 export type TrackedOrder = {
   orderNumber: string;
   status: OrderStatus;
+  paymentMethod: PaymentMethod;
   createdAt: string;
   totalCents: number;
   courier: string | null;

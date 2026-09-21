@@ -4,6 +4,7 @@ export {
   unifiedCheckoutUrl,
 } from "./config";
 export { createIntention, refundTransaction, PaymobError } from "./client";
+export { inquireByOrderNumber, isInquiryConfigured } from "./inquiry";
 export {
   buildTransactionHmacPayload,
   calculateTransactionHmac,

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Users } from "lucide-react";
 
 import { StatusPill } from "@/components/common/status-pill";
@@ -70,9 +71,12 @@ export async function CustomersAdminPage({
                           {initialsFrom(customer.full_name ?? customer.email)}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate text-[12.5px] font-semibold">
-                            {customer.full_name ?? "—"}
-                          </p>
+                          <Link
+                            href={`/dashboard/customers/${customer.id}`}
+                            className="block truncate text-[12.5px] font-semibold hover:underline"
+                          >
+                            {customer.full_name ?? customer.email ?? "—"}
+                          </Link>
                           <p className="truncate text-[11px] text-grey">
                             {customer.email ?? "no email on file"}
                           </p>

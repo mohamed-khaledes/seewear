@@ -14,6 +14,7 @@ import { formatDate, formatMoney } from "@/lib/utils";
 import { paymentStatus } from "@/features/orders";
 import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topbar";
 import { EmptyPanelState, Panel } from "@/features/dashboard/components/panel";
+import { ExportForm } from "@/features/dashboard/components/export-form";
 import { getPaymentsSummary } from "@/features/dashboard/services/api/dashboard.server";
 import { TablePagination } from "@/features/dashboard/components/table-pagination";
 
@@ -32,6 +33,7 @@ export async function PaymentsAdminPage({
       <DashboardTopbar
         title="Payments"
         subtitle={`Paymob · ${live ? "Live" : "Not connected"} · EGP`}
+        actions={<ExportForm action="/dashboard/payments/export" label="Export CSV" />}
       />
 
       <div className="grid gap-4 px-5 py-6 lg:px-8">

@@ -2,6 +2,7 @@
 
 import { siteConfig } from "@/config/site";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
+import { allowByAddress, RATE_LIMITED_MESSAGE } from "@/lib/rate-limit";
 import { contactSchema, type ContactResult, type ContactValues } from "@/features/content/types";
 
 /** Customer-supplied text lands in an HTML email — escape all of it. */
@@ -27,6 +28,11 @@ export async function sendContactMessage(values: ContactValues): Promise<Contact
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Check the form and try again",
     };
+  }
+
+  // Each message lands in a real inbox; without a limit this is a spam relay.
+  if (!(await allowByAddress("contact"))) {
+    return { ok: false, error: RATE_LIMITED_MESSAGE };
   }
 
   const { name, email, orderNumber, topic, message } = parsed.data;

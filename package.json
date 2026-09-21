@@ -14,7 +14,9 @@
     "db:seed": "tsx --env-file=.env.local supabase/seed/index.ts",
     "db:check": "tsx scripts/check-seed-skus.ts",
     "db:photos": "tsx scripts/check-product-photos.ts",
-    "models:manifest": "tsx scripts/build-model-manifest.ts"
+    "models:manifest": "tsx scripts/build-model-manifest.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@google/model-viewer": "^4.3.1",
@@ -23,6 +25,8 @@
     "@supabase/supabase-js": "^2.116.0",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-query-devtools": "^5.102.8",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.2.6",
     "date-fns": "^4.4.0",
@@ -42,6 +46,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -51,6 +56,7 @@
     "supabase": "^2.117.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

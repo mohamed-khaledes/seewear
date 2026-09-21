@@ -1,8 +1,9 @@
 import Link from "next/link";
 
+import { JsonLd } from "@/components/common/json-ld";
 import { Marquee } from "@/components/layout/marquee";
 import { SectionHeader } from "@/components/layout/section-header";
-import { marqueeItems } from "@/config/site";
+import { marqueeItems, siteConfig } from "@/config/site";
 import { Editorial } from "@/features/home/components/editorial";
 import { Hero } from "@/features/home/components/hero";
 import { ProductGrid } from "@/features/products";
@@ -13,6 +14,18 @@ export async function HomePage() {
 
   return (
     <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "OnlineStore",
+          name: siteConfig.name,
+          url: siteConfig.url,
+          description: siteConfig.description,
+          email: siteConfig.support.email,
+          areaServed: { "@type": "Country", name: "Egypt" },
+          currenciesAccepted: "EGP",
+        }}
+      />
       <Hero />
       <Marquee items={marqueeItems} />
 

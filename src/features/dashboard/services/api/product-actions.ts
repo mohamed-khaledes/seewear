@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { notifyBackInStock } from "@/lib/stock-alerts";
+
 import { createClient } from "@/lib/supabase/server";
 import { toPiastres } from "@/lib/utils";
 import { assertCanManageStore } from "./guards.server";
@@ -111,6 +113,9 @@ export async function updateProductAction(
   const sync = await syncChildren(supabase, id, parsed.data);
   if (sync) return sync;
 
+  // A saved product is the usual way stock comes back; tell whoever asked.
+  await notifyBackInStock();
+
   revalidateCatalog(parsed.data.slug);
   return { ok: true };
 }
@@ -142,8 +147,39 @@ export async function setProductStatusAction(
 
   if (error) return { ok: false, error: "We could not change that status." };
 
+  if (status === "active") await notifyBackInStock();
+
   revalidateCatalog();
   return { ok: true };
+}
+
+/**
+ * Publishes or unpublishes several products at once — the difference between
+ * launching a drop with one click and with twenty page loads.
+ */
+export async function setProductsStatusAction(
+  ids: string[],
+  status: "active" | "draft",
+): Promise<ActionResult<number>> {
+  const blocked = await assertCanManageStore();
+  if (blocked) return blocked;
+
+  const unique = [...new Set(ids)].slice(0, 200);
+  if (unique.length === 0) return { ok: false, error: "Select at least one product." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .update({ status })
+    .in("id", unique)
+    .select("id");
+
+  if (error) return { ok: false, error: "We could not change those products." };
+
+  if (status === "active") await notifyBackInStock();
+
+  revalidateCatalog();
+  return { ok: true, data: data?.length ?? 0 };
 }
 
 /**

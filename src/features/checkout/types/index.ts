@@ -50,10 +50,15 @@ export const shippingAddressSchema = z.object({
 
 export type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
+export const PAYMENT_METHODS = ["card", "cod"] as const;
+
 export const checkoutSchema = z.object({
   email: z.string().trim().min(1, "We send the receipt here").email("That email looks off"),
   shipping: shippingAddressSchema,
   discountCode: z.string().trim().max(40),
+  paymentMethod: z.enum(PAYMENT_METHODS),
+  /** Signed-in shoppers can keep the address for next time. */
+  saveAddress: z.boolean(),
 });
 
 export type CheckoutValues = z.infer<typeof checkoutSchema>;

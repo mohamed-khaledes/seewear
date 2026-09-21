@@ -14,6 +14,7 @@ import { formatDateTime, formatMoney } from "@/lib/utils";
 import { orderStatusMeta } from "@/features/orders";
 import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topbar";
 import { EmptyPanelState } from "@/features/dashboard/components/panel";
+import { ExportForm } from "@/features/dashboard/components/export-form";
 import { FilterChips } from "@/features/dashboard/components/filter-chips";
 import {
   getAdminOrderCounts,
@@ -46,13 +47,14 @@ export async function OrdersAdminPage({
     getAdminOrders(filter || "all", Number(searchParams.page ?? 1)),
     getAdminOrderCounts(),
   ]);
-  const needFulfilment = counts.paid ?? 0;
+  const needFulfilment = counts.unfulfilled ?? 0;
 
   return (
     <>
       <DashboardTopbar
         title="Orders"
         subtitle={`${counts.all ?? 0} orders · ${needFulfilment} need fulfilment`}
+        actions={<ExportForm action="/dashboard/orders/export" label="Export CSV" />}
       />
 
       <div className="px-5 py-6 lg:px-8">

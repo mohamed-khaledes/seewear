@@ -220,6 +220,12 @@ export type Database = {
           tracking_number: string | null;
           tracking_url: string | null;
           status_note: string | null;
+          payment_method: "card" | "cod";
+          stock_held: boolean;
+          expired_at: string | null;
+          restocked_at: string | null;
+          refunded_cents: number;
+          invoice_number: string | null;
           created_at: string;
         };
         Insert: {
@@ -242,6 +248,12 @@ export type Database = {
           tracking_number?: string | null;
           tracking_url?: string | null;
           status_note?: string | null;
+          payment_method?: "card" | "cod";
+          stock_held?: boolean;
+          expired_at?: string | null;
+          restocked_at?: string | null;
+          refunded_cents?: number;
+          invoice_number?: string | null;
           created_at?: string;
         };
         Update: {
@@ -264,6 +276,12 @@ export type Database = {
           tracking_number?: string | null;
           tracking_url?: string | null;
           status_note?: string | null;
+          payment_method?: "card" | "cod";
+          stock_held?: boolean;
+          expired_at?: string | null;
+          restocked_at?: string | null;
+          refunded_cents?: number;
+          invoice_number?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -432,6 +450,8 @@ export type Database = {
           min_subtotal_cents: number;
           active: boolean;
           expires_at: string | null;
+          usage_limit: number | null;
+          once_per_customer: boolean;
           created_at: string;
         };
         Insert: {
@@ -442,6 +462,8 @@ export type Database = {
           min_subtotal_cents?: number;
           active?: boolean;
           expires_at?: string | null;
+          usage_limit?: number | null;
+          once_per_customer?: boolean;
           created_at?: string;
         };
         Update: {
@@ -452,6 +474,8 @@ export type Database = {
           min_subtotal_cents?: number;
           active?: boolean;
           expires_at?: string | null;
+          usage_limit?: number | null;
+          once_per_customer?: boolean;
           created_at?: string;
         };
         Relationships: [];
@@ -466,6 +490,11 @@ export type Database = {
           free_shipping_threshold_cents: number;
           shipping_flat_cents: number;
           tax_rate: number;
+          cod_enabled: boolean;
+          legal_name: string | null;
+          commercial_register: string | null;
+          tax_registration: string | null;
+          registered_address: string | null;
           updated_at: string;
         };
         Insert: {
@@ -477,6 +506,11 @@ export type Database = {
           free_shipping_threshold_cents?: number;
           shipping_flat_cents?: number;
           tax_rate?: number;
+          cod_enabled?: boolean;
+          legal_name?: string | null;
+          commercial_register?: string | null;
+          tax_registration?: string | null;
+          registered_address?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -488,8 +522,109 @@ export type Database = {
           free_shipping_threshold_cents?: number;
           shipping_flat_cents?: number;
           tax_rate?: number;
+          cod_enabled?: boolean;
+          legal_name?: string | null;
+          commercial_register?: string | null;
+          tax_registration?: string | null;
+          registered_address?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      shipping_rates: {
+        Row: { governorate: string; rate_cents: number; delivery_days: string | null; updated_at: string };
+        Insert: { governorate: string; rate_cents: number; delivery_days?: string | null; updated_at?: string };
+        Update: { governorate?: string; rate_cents?: number; delivery_days?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      addresses: {
+        Row: {
+          id: string;
+          user_id: string;
+          label: string | null;
+          full_name: string;
+          phone: string;
+          line1: string;
+          line2: string | null;
+          city: string;
+          governorate: string;
+          postal_code: string | null;
+          is_default: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          label?: string | null;
+          full_name: string;
+          phone: string;
+          line1: string;
+          line2?: string | null;
+          city: string;
+          governorate: string;
+          postal_code?: string | null;
+          is_default?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          label?: string | null;
+          full_name?: string;
+          phone?: string;
+          line1?: string;
+          line2?: string | null;
+          city?: string;
+          governorate?: string;
+          postal_code?: string | null;
+          is_default?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      reviews: {
+        Row: {
+          id: string;
+          product_id: string;
+          user_id: string;
+          rating: number;
+          title: string | null;
+          body: string | null;
+          author_name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          user_id: string;
+          rating: number;
+          title?: string | null;
+          body?: string | null;
+          author_name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          user_id?: string;
+          rating?: number;
+          title?: string | null;
+          body?: string | null;
+          author_name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      stock_alerts: {
+        Row: { id: string; variant_id: string; email: string; created_at: string; notified_at: string | null };
+        Insert: { id?: string; variant_id: string; email: string; created_at?: string; notified_at?: string | null };
+        Update: { id?: string; variant_id?: string; email?: string; created_at?: string; notified_at?: string | null };
+        Relationships: [];
+      };
+      rate_limits: {
+        Row: { key: string; window_start: string; hits: number };
+        Insert: { key: string; window_start?: string; hits?: number };
+        Update: { key?: string; window_start?: string; hits?: number };
         Relationships: [];
       };
     };
@@ -502,11 +637,21 @@ export type Database = {
       merge_guest_cart: { Args: { p_items: Json }; Returns: undefined };
       replace_cart: { Args: { p_items: Json }; Returns: undefined };
       admin_dashboard_stats: { Args: { p_days?: number }; Returns: Json };
+      is_service_role: { Args: Record<PropertyKey, never>; Returns: boolean };
+      hold_order_stock: { Args: { p_order_id: string }; Returns: boolean };
+      release_order_stock: { Args: { p_order_id: string }; Returns: boolean };
+      expire_order: { Args: { p_order_id: string }; Returns: boolean };
+      cancel_order: { Args: { p_order_id: string; p_note?: string | null }; Returns: boolean };
+      hit_rate_limit: {
+        Args: { p_key: string; p_window_seconds: number; p_max: number };
+        Returns: boolean;
+      };
     };
     Enums: {
       user_role: "admin" | "user";
       order_status:
         | "pending"
+        | "confirmed"
         | "paid"
         | "fulfilled"
         | "delivered"

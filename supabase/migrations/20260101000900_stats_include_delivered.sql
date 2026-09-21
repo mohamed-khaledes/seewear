@@ -1,12 +1,19 @@
--- SEEWEAR — count delivered orders as revenue.
+-- SEEWEAR — revenue counts money actually earned.
 --
--- `admin_dashboard_stats` counted an order towards revenue, AOV, the chart, the
--- top products and the conversion rate while it was 'paid' or 'fulfilled'. Adding
--- 'delivered' to the order journey would otherwise have made every completed
--- order fall out of the overview the moment it arrived at the customer.
+-- `admin_dashboard_stats` counted an order as revenue while it was paid or
+-- fulfilled. Two later changes made that wrong:
+--   * 'delivered' joined the journey, and every completed order would have
+--     fallen out of revenue the moment it reached the customer;
+--   * cash on delivery arrived, and a cash order is not money until the courier
+--     collects it — counting it when it merely ships would book revenue for
+--     parcels refused at the door.
 --
--- The body below is the function from ..._functions.sql with 'delivered' added to
--- its four status lists, and nothing else changed.
+-- So revenue, AOV, the chart and top products count card orders once paid and
+-- cash orders once delivered. The conversion rate counts every checkout that
+-- became a real order, cash confirmations included.
+--
+-- Runs after ..._commerce.sql, which adds `payment_method`. The body is the
+-- function from ..._functions.sql with only those predicates changed.
 
 create or replace function public.admin_dashboard_stats(p_days int default 30)
 returns jsonb
@@ -26,11 +33,11 @@ begin
 
   with paid as (
     select * from public.orders
-    where status in ('paid', 'fulfilled', 'delivered') and created_at >= v_from
+    where ((payment_method = 'card' and status in ('paid', 'fulfilled', 'delivered')) or (payment_method = 'cod' and status = 'delivered')) and created_at >= v_from
   ),
   prev_paid as (
     select * from public.orders
-    where status in ('paid', 'fulfilled', 'delivered')
+    where ((payment_method = 'card' and status in ('paid', 'fulfilled', 'delivered')) or (payment_method = 'cod' and status = 'delivered'))
       and created_at >= v_prev_from and created_at < v_from
   ),
   current_totals as (
@@ -47,14 +54,14 @@ begin
   ),
   funnel as (
     select
-      count(*) filter (where status in ('paid', 'fulfilled', 'delivered'))::int as completed,
+      count(*) filter (where status in ('confirmed', 'paid', 'fulfilled', 'delivered'))::int as completed,
       count(*)::int as started
     from public.orders
     where created_at >= v_from
   ),
   prev_funnel as (
     select
-      count(*) filter (where status in ('paid', 'fulfilled', 'delivered'))::int as completed,
+      count(*) filter (where status in ('confirmed', 'paid', 'fulfilled', 'delivered'))::int as completed,
       count(*)::int as started
     from public.orders
     where created_at >= v_prev_from and created_at < v_from

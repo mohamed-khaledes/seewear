@@ -34,21 +34,37 @@ async function loadVisibleOrder(orderNumber: string): Promise<OrderSummaryRow | 
   return data;
 }
 
-export async function CheckoutSuccessPage({ orderNumber }: { orderNumber: string }) {
+export async function CheckoutSuccessPage({
+  orderNumber,
+  method,
+}: {
+  orderNumber: string;
+  /**
+   * From the redirect, not the database: a guest cannot read their order here,
+   * and the wording must not claim a cash order was paid. It changes words
+   * only, never what data is shown.
+   */
+  method?: string;
+}) {
   const order = await loadVisibleOrder(orderNumber);
+  const cash = method === "cod" || order?.status === "confirmed";
 
   return (
     <div className="bg-concrete px-5 py-20 lg:py-28">
       <div className="mx-auto max-w-lg bg-paper p-8 text-center lg:p-12">
         <CheckCircle2 className="mx-auto size-10 text-ok" strokeWidth={1.4} />
         <p className="up-xs mt-5 text-grey-2">Confirmation</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Payment received</h1>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">
+          {cash ? "Order confirmed" : "Order received"}
+        </h1>
 
         {orderNumber ? (
           <p className="mt-3 text-sm text-grey-2">
             Order{" "}
             <span className="font-semibold tabular-nums text-ink">{orderNumber}</span> is
-            in. A receipt is on its way to your inbox.
+            in. {cash
+              ? "Have the cash ready for the courier — the confirmation email has the total."
+              : "A receipt is on its way to your inbox."}
           </p>
         ) : (
           <p className="mt-3 text-sm text-grey-2">
@@ -61,7 +77,11 @@ export async function CheckoutSuccessPage({ orderNumber }: { orderNumber: string
             <div className="mb-4 flex items-center justify-between">
               <span className="up-xs text-grey-2">Status</span>
               <StatusPill tone={order.status === "pending" ? "warn" : "ok"}>
-                {order.status === "pending" ? "Confirming payment" : "Paid"}
+                {order.status === "pending"
+                  ? "Confirming payment"
+                  : order.status === "confirmed"
+                    ? "Confirmed · pay on delivery"
+                    : "Paid"}
               </StatusPill>
             </div>
 

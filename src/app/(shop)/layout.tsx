@@ -2,7 +2,8 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SessionProvider } from "@/features/auth/components/session-provider";
 import { getSessionUser } from "@/features/auth/server";
-import { CartDrawer, CartSync } from "@/features/cart";
+import { CartDrawer, CartSync, PricingRulesProvider } from "@/features/cart";
+import { getPricingRules } from "@/lib/store-settings";
 import { ModelPeekPanel } from "@/features/products";
 
 export default async function ShopLayout({
@@ -10,10 +11,11 @@ export default async function ShopLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getSessionUser();
+  const [user, rules] = await Promise.all([getSessionUser(), getPricingRules()]);
 
   return (
     <SessionProvider user={user}>
+      <PricingRulesProvider rules={rules}>
       <SiteHeader user={user} />
       {/* Fill the screen below the header, not a whole extra screen. With
           min-h-screen the document was always taller than the viewport by the
@@ -28,6 +30,7 @@ export default async function ShopLayout({
       {/* One WebGL canvas for the whole grid — a browser will not give eleven
           cards eleven contexts. */}
       <ModelPeekPanel />
+      </PricingRulesProvider>
     </SessionProvider>
   );
 }

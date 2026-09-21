@@ -10,10 +10,11 @@ import { CartLineRow } from "@/features/cart/components/cart-line-row";
 import { Viewer3DToggle } from "@/features/products/components/viewer-3d-toggle";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { amountToFreeShipping } from "@/features/cart/services/utils/totals";
+import { formatTaxRate } from "@/lib/pricing";
 
 export function CartPage() {
-  const { items, totals, hydrated, setQuantity, removeItem } = useCart();
-  const remaining = amountToFreeShipping(totals.subtotalCents);
+  const { items, totals, rules, hydrated, setQuantity, removeItem } = useCart();
+  const remaining = amountToFreeShipping(totals.subtotalCents, rules);
 
   return (
     <div className="bg-concrete">
@@ -73,7 +74,7 @@ export function CartPage() {
                 </dd>
               </div>
               <div className="flex justify-between text-grey-2">
-                <dt>VAT (14%)</dt>
+                <dt>VAT ({formatTaxRate(rules)})</dt>
                 <dd className="tabular-nums text-ink">{formatMoney(totals.taxCents)}</dd>
               </div>
               <div className="mt-3 flex items-baseline justify-between border-t border-line pt-4">
@@ -106,7 +107,12 @@ export function CartPage() {
 
             <p className="mt-4 text-xs leading-relaxed text-grey">
               Totals are recalculated from the catalogue when you pay — the price you
-              see is the price you are charged.
+              see is the price you are charged. Shipping is confirmed for your
+              governorate at checkout. Fourteen days to return:{" "}
+              <Link href="/help/returns" className="underline underline-offset-2 hover:text-ink">
+                returns policy
+              </Link>
+              .
             </p>
           </aside>
         </div>

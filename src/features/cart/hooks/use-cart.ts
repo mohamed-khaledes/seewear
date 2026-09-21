@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useCartStore } from "@/features/cart/store/cart-store";
 import { computeTotals } from "@/features/cart/services/utils/totals";
+import { usePricingRules } from "@/features/cart/components/pricing-provider";
 
 /**
  * Read the cart. `hydrated` is false during the first client render so nothing
@@ -18,12 +19,17 @@ export function useCart() {
   const replaceItems = useCartStore((state) => state.replaceItems);
   const clear = useCartStore((state) => state.clear);
 
-  const totals = useMemo(() => computeTotals(items), [items]);
+  const rules = usePricingRules();
+
+  // No governorate yet, so shipping here is the flat-rate estimate. Checkout
+  // re-prices once the address is known.
+  const totals = useMemo(() => computeTotals(items, 0, rules), [items, rules]);
 
   return {
     items,
     hydrated,
     totals,
+    rules,
     itemCount: totals.itemCount,
     addItem,
     setQuantity,

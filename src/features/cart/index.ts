@@ -3,6 +3,7 @@ export { BagButton } from "./components/bag-button";
 export { CartDrawer } from "./components/cart-drawer";
 export { CartLineRow } from "./components/cart-line-row";
 export { CartSync } from "./components/cart-sync";
+export { PricingRulesProvider, usePricingRules } from "./components/pricing-provider";
 export { CartPage } from "./pages/cart-page";
 export { useCart } from "./hooks/use-cart";
 export { useAddToBag } from "./hooks/use-add-to-bag";

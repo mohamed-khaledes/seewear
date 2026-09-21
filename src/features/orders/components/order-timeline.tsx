@@ -2,10 +2,11 @@ import { Check, Truck } from "lucide-react";
 
 import { cn, formatDateTime } from "@/lib/utils";
 import {
-  ORDER_TIMELINE,
   orderStatusMeta,
+  timelineFor,
   timelineIndex,
   type OrderStatus,
+  type PaymentMethod,
 } from "@/features/orders/services/utils/status";
 
 export type TimelineEvent = {
@@ -24,12 +25,14 @@ export type TimelineEvent = {
  */
 export function OrderTimeline({
   status,
+  paymentMethod = "card",
   events = [],
   courier,
   trackingNumber,
   trackingUrl,
 }: {
   status: OrderStatus;
+  paymentMethod?: PaymentMethod;
   events?: TimelineEvent[];
   courier?: string | null;
   trackingNumber?: string | null;
@@ -95,14 +98,15 @@ export function OrderTimeline({
     );
   }
 
-  const current = timelineIndex(status);
+  const steps = timelineFor(paymentMethod);
+  const current = timelineIndex(status, paymentMethod);
 
   return (
     <div>
       <ol className="grid gap-0">
-        {ORDER_TIMELINE.map((step, index) => {
+        {steps.map((step, index) => {
           const done = index <= current;
-          const last = index === ORDER_TIMELINE.length - 1;
+          const last = index === steps.length - 1;
           const stamp = stampFor(step.status);
 
           return (

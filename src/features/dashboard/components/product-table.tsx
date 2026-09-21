@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProductShot } from "@/components/common/product-shot";
 import { StatusPill } from "@/components/common/status-pill";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,15 +33,89 @@ import { cn, formatMoney } from "@/lib/utils";
 import { useDemoGuard } from "@/features/dashboard/hooks/use-demo-guard";
 import {
   deleteProductAction,
+  setProductsStatusAction,
   setProductStatusAction,
 } from "@/features/dashboard/services/api/product-actions";
 import type { AdminProductRow } from "@/features/dashboard/types";
 
 export function ProductTable({ products }: { products: AdminProductRow[] }) {
+  const router = useRouter();
+  const { guard } = useDemoGuard();
+  const [pending, startTransition] = useTransition();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Only ids still on this page count: paging or filtering must not carry a
+  // hidden selection into the next bulk action.
+  const visible = selected.size
+    ? products.filter((product) => selected.has(product.id)).map((product) => product.id)
+    : [];
+  const allChecked = products.length > 0 && visible.length === products.length;
+
+  function toggle(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function bulk(status: "active" | "draft") {
+    guard(() =>
+      startTransition(async () => {
+        const result = await setProductsStatusAction(visible, status);
+        if (result.ok) {
+          toast.success(
+            `${result.data ?? visible.length} ${status === "active" ? "published" : "moved to draft"}`,
+          );
+          setSelected(new Set());
+          router.refresh();
+        } else {
+          toast.error(result.error);
+        }
+      }),
+    );
+  }
+
   return (
+    <>
+      {visible.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 border-b border-line bg-concrete px-4 py-2.5">
+          <span className="text-xs font-semibold tabular-nums">{visible.length} selected</span>
+          <Button size="sm" disabled={pending} onClick={() => bulk("active")} className="text-xs">
+            Publish
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => bulk("draft")}
+            className="text-xs"
+          >
+            Move to draft
+          </Button>
+          {pending ? <Loader2 className="size-3.5 animate-spin text-grey" /> : null}
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="ml-auto text-xs text-grey-2 hover:text-ink"
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-10">
+            <Checkbox
+              aria-label="Select every product on this page"
+              checked={allChecked}
+              onCheckedChange={(checked) =>
+                setSelected(checked === true ? new Set(products.map((p) => p.id)) : new Set())
+              }
+            />
+          </TableHead>
           <TableHead>Product</TableHead>
           <TableHead className="hidden md:table-cell">Colours</TableHead>
           <TableHead>Price</TableHead>
@@ -50,14 +126,28 @@ export function ProductTable({ products }: { products: AdminProductRow[] }) {
       </TableHeader>
       <TableBody>
         {products.map((product) => (
-          <ProductRow key={product.id} product={product} />
+          <ProductRow
+            key={product.id}
+            product={product}
+            selected={selected.has(product.id)}
+            onToggle={() => toggle(product.id)}
+          />
         ))}
       </TableBody>
     </Table>
+    </>
   );
 }
 
-function ProductRow({ product }: { product: AdminProductRow }) {
+function ProductRow({
+  product,
+  selected,
+  onToggle,
+}: {
+  product: AdminProductRow;
+  selected: boolean;
+  onToggle: () => void;
+}) {
   const router = useRouter();
   const { guard } = useDemoGuard();
   const [pending, startTransition] = useTransition();
@@ -105,7 +195,14 @@ function ProductRow({ product }: { product: AdminProductRow }) {
   }
 
   return (
-    <TableRow>
+    <TableRow data-state={selected ? "selected" : undefined}>
+      <TableCell>
+        <Checkbox
+          aria-label={`Select ${product.name}`}
+          checked={selected}
+          onCheckedChange={onToggle}
+        />
+      </TableCell>
       <TableCell>
         <div className="flex items-center gap-3">
           <div className="w-10 shrink-0 overflow-hidden rounded-md border border-line bg-[#f4f4f2]">

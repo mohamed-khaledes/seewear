@@ -20,6 +20,9 @@ export type OrderEmailData = {
   shippingCents: number;
   taxCents: number;
   totalCents: number;
+  /** Cash orders are confirmed, not paid: the email must not say the money moved. */
+  paymentMethod?: "card" | "cod";
+  invoiceNumber?: string | null;
   shippingAddress: {
     fullName?: string;
     phone?: string;
@@ -69,6 +72,10 @@ export function orderConfirmationText(data: OrderEmailData): string {
 
   return [
     `Thanks — order ${data.orderNumber} is confirmed.`,
+    data.paymentMethod === "cod"
+      ? `Pay ${formatMoney(data.totalCents)} in cash when the courier arrives.`
+      : null,
+    data.invoiceNumber ? `Invoice ${data.invoiceNumber}` : null,
     "",
     "What you bought",
     lines,
@@ -132,8 +139,11 @@ export function orderConfirmationHtml(data: OrderEmailData): string {
       <p style="margin:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#6b6b67;">Order confirmed</p>
       <h1 style="margin:8px 0 0;font-size:24px;color:#0a0a0a;letter-spacing:-.01em;">${escapeHtml(data.orderNumber)}</h1>
       <p style="margin:14px 0 0;font-size:14px;line-height:1.6;color:#6b6b67;">
-        Payment went through and we are packing it now. You will get a second note
-        the moment it leaves us.
+        ${
+          data.paymentMethod === "cod"
+            ? `We are packing it now. Have <strong>${formatMoney(data.totalCents)}</strong> in cash ready for the courier.`
+            : "Payment went through and we are packing it now."
+        } You will get a second note the moment it leaves us.
       </p>
 
       <table style="width:100%;border-collapse:collapse;margin-top:28px;">

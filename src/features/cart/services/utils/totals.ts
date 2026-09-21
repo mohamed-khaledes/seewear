@@ -1,9 +1,12 @@
 import {
-  FREE_SHIPPING_THRESHOLD_CENTS,
-  SHIPPING_FLAT_CENTS,
-  TAX_RATE,
-} from "@/config/constants";
+  DEFAULT_PRICING_RULES,
+  shippingCentsFor,
+  taxCentsFor,
+  type PricingRules,
+} from "@/lib/pricing";
 import type { CartTotals } from "@/features/cart/types";
+
+export { shippingCentsFor, taxCentsFor };
 
 type Priceable = { priceCents: number; quantity: number };
 
@@ -15,28 +18,25 @@ export function cartSubtotalCents(items: Priceable[]): number {
   return items.reduce((total, item) => total + item.priceCents * item.quantity, 0);
 }
 
-export function shippingCentsFor(subtotalCents: number): number {
-  if (subtotalCents === 0) return 0;
-  return subtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : SHIPPING_FLAT_CENTS;
-}
-
-export function taxCentsFor(taxableCents: number): number {
-  return Math.round(Math.max(taxableCents, 0) * TAX_RATE);
-}
-
 /**
  * The single definition of what an order costs. The checkout route runs this
- * again with prices read from the database — the browser's numbers are only
- * ever used to render.
+ * again with prices read from the database and rules read from the store
+ * settings — the browser's numbers are only ever used to render.
+ *
+ * VAT is charged on the discounted subtotal; the free-shipping threshold is
+ * judged on the subtotal before the discount. The shipping help page states
+ * both, and reads them from the same rules.
  */
 export function computeTotals(
   items: Priceable[],
   discountCents = 0,
+  rules: PricingRules = DEFAULT_PRICING_RULES,
+  governorate?: string | null,
 ): CartTotals {
   const subtotalCents = cartSubtotalCents(items);
   const cappedDiscount = Math.min(Math.max(discountCents, 0), subtotalCents);
-  const shippingCents = shippingCentsFor(subtotalCents);
-  const taxCents = taxCentsFor(subtotalCents - cappedDiscount);
+  const shippingCents = shippingCentsFor(subtotalCents, rules, governorate);
+  const taxCents = taxCentsFor(subtotalCents - cappedDiscount, rules);
 
   return {
     subtotalCents,
@@ -49,6 +49,9 @@ export function computeTotals(
 }
 
 /** How much more the customer needs to spend to unlock free shipping. */
-export function amountToFreeShipping(subtotalCents: number): number {
-  return Math.max(FREE_SHIPPING_THRESHOLD_CENTS - subtotalCents, 0);
+export function amountToFreeShipping(
+  subtotalCents: number,
+  rules: PricingRules = DEFAULT_PRICING_RULES,
+): number {
+  return Math.max(rules.freeShippingThresholdCents - subtotalCents, 0);
 }

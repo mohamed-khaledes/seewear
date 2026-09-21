@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ShippingPage } from "@/features/content";
+import { ShippingPage } from "@/features/content/server";
 
 export const metadata: Metadata = {
   title: "Shipping",

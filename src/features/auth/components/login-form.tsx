@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,7 +65,15 @@ export function LoginForm({ next }: { next?: string }) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Password</FormLabel>
+              <div className="flex items-baseline justify-between">
+                <FormLabel className="up-xs text-grey-2">Password</FormLabel>
+                <Link
+                  href="/forgot-password"
+                  className="text-[11px] text-grey-2 underline-offset-4 hover:text-ink hover:underline"
+                >
+                  Forgot it?
+                </Link>
+              </div>
               <FormControl>
                 <Input
                   type="password"

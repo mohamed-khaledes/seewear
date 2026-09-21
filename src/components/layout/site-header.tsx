@@ -14,12 +14,12 @@ export async function SiteHeader({ user }: { user: SessionUser | null }) {
   return (
     <>
       {settings.announcement ? (
-        <div className="up-xs bg-ink px-4 py-2 text-center text-white">
+        <div data-chrome className="up-xs bg-ink px-4 py-2 text-center text-white">
           {settings.announcement}
         </div>
       ) : null}
 
-      <header className="sticky top-0 z-50 grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line-dark bg-ink px-5 py-4 text-white lg:grid-cols-[1fr_auto_1fr] lg:px-6">
+      <header data-chrome className="sticky top-0 z-50 grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line-dark bg-ink px-5 py-4 text-white lg:grid-cols-[1fr_auto_1fr] lg:px-6">
         <div className="flex items-center gap-4">
           <MobileNav />
           <nav aria-label="Main" className="hidden gap-6 text-[11px] font-medium lg:flex">

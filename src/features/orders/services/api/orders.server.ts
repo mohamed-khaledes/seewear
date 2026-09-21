@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isServiceRoleConfigured, isSupabaseConfigured } from "@/lib/supabase/config";
 import { siteConfig } from "@/config/site";
+import { allow, clientAddress, RATE_LIMITED_MESSAGE } from "@/lib/rate-limit";
 import {
   readShippingAddress,
   trackOrderSchema,
@@ -87,12 +88,21 @@ export async function trackOrder(values: TrackOrderValues): Promise<TrackOrderRe
   }
 
   const orderNumber = parsed.data.orderNumber.toUpperCase().replace(/\s+/g, "");
+
+  // Two limits. Per address stops one visitor hammering the form; per order
+  // number stops many addresses trying guessed emails against one known order.
+  const [byAddress, byOrder] = await Promise.all([
+    allow("trackByIp", await clientAddress()),
+    allow("trackByOrder", orderNumber),
+  ]);
+  if (!byAddress || !byOrder) return { ok: false, error: RATE_LIMITED_MESSAGE };
+
   const admin = createAdminClient();
 
   const { data, error } = await admin
     .from("orders")
     .select(
-      `order_number, status, created_at, total_cents, courier, tracking_number,
+      `order_number, status, payment_method, created_at, total_cents, courier, tracking_number,
        tracking_url, status_note, shipping_address,
        items:order_items(name, slug, color, size, quantity, image_url),
        events:order_events(status, note, created_at)`,
@@ -121,6 +131,7 @@ export async function trackOrder(values: TrackOrderValues): Promise<TrackOrderRe
   const order: TrackedOrder = {
     orderNumber: data.order_number,
     status: data.status,
+    paymentMethod: data.payment_method,
     createdAt: data.created_at,
     totalCents: data.total_cents,
     courier: data.courier,

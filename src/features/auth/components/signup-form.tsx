@@ -1,6 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { MailCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ import { signupSchema, type SignupValues } from "@/features/auth/types";
 
 export function SignupForm({ next }: { next?: string }) {
   const [pending, startTransition] = useTransition();
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   const form = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
@@ -30,11 +32,39 @@ export function SignupForm({ next }: { next?: string }) {
   function onSubmit(values: SignupValues) {
     startTransition(async () => {
       const result = await signupAction(values, next);
-      if (result?.error) {
-        form.setError("email", { message: result.error });
-        toast.error(result.error);
+      if (!result) return;
+      if ("confirmEmail" in result) {
+        setSentTo(result.confirmEmail);
+        return;
       }
+      form.setError("email", { message: result.error });
+      toast.error(result.error);
     });
+  }
+
+  if (sentTo) {
+    return (
+      <div className="border border-line bg-concrete p-6 text-center">
+        <MailCheck className="mx-auto size-8 text-ok" strokeWidth={1.4} />
+        <p className="up-xs mt-4 text-grey-2">One more step</p>
+        <h2 className="mt-2 text-lg font-bold tracking-tight">Check your inbox</h2>
+        <p className="mx-auto mt-2 max-w-[36ch] text-sm leading-relaxed text-grey-2">
+          We sent a link to <span className="font-semibold text-ink">{sentTo}</span>. Open
+          it to confirm the address and you are signed in.
+        </p>
+        <p className="mt-4 text-xs text-grey">
+          Nothing after a few minutes? Check spam, or{" "}
+          <button
+            type="button"
+            onClick={() => setSentTo(null)}
+            className="underline underline-offset-4 hover:text-ink"
+          >
+            try a different address
+          </button>
+          .
+        </p>
+      </div>
+    );
   }
 
   return (

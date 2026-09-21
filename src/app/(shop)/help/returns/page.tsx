@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ReturnsPage } from "@/features/content";
+import { ReturnsPage } from "@/features/content/server";
 
 export const metadata: Metadata = {
   title: "Returns and exchanges",

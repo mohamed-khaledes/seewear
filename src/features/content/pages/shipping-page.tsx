@@ -1,10 +1,7 @@
 import Link from "next/link";
 
-import {
-  FREE_SHIPPING_THRESHOLD_CENTS,
-  SHIPPING_FLAT_CENTS,
-  TAX_RATE,
-} from "@/config/constants";
+import { formatTaxRate, hasRegionalRates } from "@/lib/pricing";
+import { getPricingRules } from "@/lib/store-settings";
 import { formatMoney } from "@/lib/utils";
 import { ContentHero } from "@/features/content/components/content-hero";
 import {
@@ -17,17 +14,20 @@ import {
 import { HelpShell } from "@/features/content/components/help-shell";
 
 /**
- * Every figure on this page is read from the same constants the checkout uses
- * to charge, so the policy text cannot drift away from the till. Change the
- * rate in `config/constants.ts` and this page changes with it.
+ * Every figure on this page is read from the same pricing rules checkout
+ * charges from — the dashboard's Settings page — so the policy text cannot
+ * drift away from the till.
  */
-export function ShippingPage() {
+export async function ShippingPage() {
+  const rules = await getPricingRules();
+  const regional = Object.entries(rules.governorateRates).sort(([a], [b]) => a.localeCompare(b));
+
   return (
     <>
       <ContentHero
         eyebrow="Help"
         title="Shipping"
-        lede="Flat-rate express across Egypt, free once your order clears the threshold. Here is exactly what you pay and when it lands."
+        lede="Express across Egypt, free once your order clears the threshold. Here is exactly what you pay and when it lands."
         crumbs={[{ label: "Home", href: "/" }, { label: "Help", href: "/help" }, { label: "Shipping" }]}
       />
 
@@ -38,21 +38,35 @@ export function ShippingPage() {
               items={[
                 {
                   label: "Express delivery",
-                  note: "Flat rate, anywhere in Egypt",
-                  value: formatMoney(SHIPPING_FLAT_CENTS),
+                  note: hasRegionalRates(rules)
+                    ? "Most of Egypt — see the governorates below that differ"
+                    : "Flat rate, anywhere in Egypt",
+                  value: formatMoney(rules.shippingFlatCents),
                 },
                 {
-                  label: `Orders over ${formatMoney(FREE_SHIPPING_THRESHOLD_CENTS)}`,
-                  note: "Measured on the subtotal, before any discount",
+                  label: `Orders over ${formatMoney(rules.freeShippingThresholdCents)}`,
+                  note: "Measured on the subtotal, before any discount — everywhere",
                   value: "Free",
                 },
                 {
                   label: "VAT",
                   note: "Charged on the subtotal after any discount",
-                  value: `${Math.round(TAX_RATE * 100)}%`,
+                  value: formatTaxRate(rules),
                 },
               ]}
             />
+
+            {regional.length > 0 ? (
+              <div className="mt-6">
+                <p className="up-xs mb-2 text-grey-2">Governorates with their own rate</p>
+                <FactList
+                  items={regional.map(([governorate, cents]) => ({
+                    label: governorate,
+                    value: formatMoney(cents),
+                  }))}
+                />
+              </div>
+            ) : null}
 
             {/* Both claims below are what `computeTotals` actually does: shipping
                 is decided on the pre-discount subtotal, VAT on the post-discount
@@ -83,10 +97,10 @@ export function ShippingPage() {
                 next working morning.
               </p>
               <p>
-                You will get a confirmation email the moment payment clears, and a
-                second one with a tracking reference when the parcel leaves us. Both
-                are also on your{" "}
-                <Link href="/account/orders">order history</Link>.
+                You will get a confirmation email the moment payment clears — or
+                straight away for cash on delivery — and a second one with a tracking
+                reference when the parcel leaves us. You can follow it any time on{" "}
+                <Link href="/track">order tracking</Link>.
               </p>
             </Prose>
           </ContentCard>
