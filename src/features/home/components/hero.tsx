@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="relative grid min-h-105 place-items-center overflow-hidden bg-ink text-white md:min-h-140 lg:min-h-155">
+    <section className="relative grid place-items-center overflow-hidden bg-ink text-white min-h-[calc(100dvh-150px)]">
       <Image
         src="/hero/hero-lineup.webp"
         alt=""
