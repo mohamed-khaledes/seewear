@@ -225,12 +225,12 @@ export function ProductForm({
                       type="button"
                       onClick={() => removeImage(index)}
                       aria-label={`Remove image ${index + 1}`}
-                      className="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-white/90 text-ink opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                      className="absolute end-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-white/90 text-ink opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                     >
                       <X className="size-3.5" />
                     </button>
                     {index === 0 ? (
-                      <span className="up-xs absolute bottom-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[9px] text-white">
+                      <span className="up-xs absolute bottom-1.5 start-1.5 rounded bg-ink px-1.5 py-0.5 text-[9px] text-white">
                         Main
                       </span>
                     ) : null}

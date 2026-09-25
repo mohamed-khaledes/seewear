@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { formatMoney } from "@/lib/utils";
+import { useDir, useT } from "@/lib/i18n";
 import { amountToFreeShipping } from "@/features/cart/services/utils/totals";
 import { CartLineRow } from "@/features/cart/components/cart-line-row";
 import { useCart } from "@/features/cart/hooks/use-cart";
@@ -20,28 +21,30 @@ export function CartDrawer() {
   const open = useUiStore((state) => state.cartDrawerOpen);
   const setOpen = useUiStore((state) => state.setCartDrawerOpen);
   const { items, totals, rules, setQuantity, removeItem, hydrated } = useCart();
+  const t = useT();
+  // The bag slides in from the side the language ends on.
+  const dir = useDir();
 
   const remaining = amountToFreeShipping(totals.subtotalCents, rules);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+      <SheetContent side={dir === "rtl" ? "left" : "right"} className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <SheetHeader className="border-b border-line px-6 py-5">
           <SheetTitle className="up-sm font-bold">
-            Your bag{hydrated && totals.itemCount > 0 ? ` (${totals.itemCount})` : ""}
+            {t("cart.title")}
+            {hydrated && totals.itemCount > 0 ? ` (${totals.itemCount})` : ""}
           </SheetTitle>
         </SheetHeader>
 
         {!hydrated ? null : items.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
             <ShoppingBag className="size-8 text-grey" strokeWidth={1.3} />
-            <p className="text-base font-semibold">Nothing in the bag yet</p>
-            <p className="text-sm text-grey-2">
-              Pieces you add will sit here until you check out.
-            </p>
+            <p className="text-base font-semibold">{t("cart.emptyTitle")}</p>
+            <p className="text-sm text-grey-2">{t("cart.emptyBody")}</p>
             <Button asChild size="lg" className="up-sm mt-2 h-11 px-6 font-semibold">
               <Link href="/products" onClick={() => setOpen(false)}>
-                Start shopping
+                {t("common.startShopping")}
               </Link>
             </Button>
           </div>
@@ -62,31 +65,29 @@ export function CartDrawer() {
             <div className="border-t border-line bg-concrete px-6 py-5">
               {remaining > 0 ? (
                 <p className="up-xs mb-3 text-grey-2">
-                  {formatMoney(remaining)} more for free express shipping
+                  {t("cart.freeShippingRemaining", { amount: formatMoney(remaining) })}
                 </p>
               ) : (
-                <p className="up-xs mb-3 text-ok">Free express shipping unlocked</p>
+                <p className="up-xs mb-3 text-ok">{t("cart.freeShippingUnlocked")}</p>
               )}
 
               <div className="flex items-baseline justify-between">
-                <span className="up-xs text-grey-2">Subtotal</span>
+                <span className="up-xs text-grey-2">{t("cart.subtotal")}</span>
                 <span className="text-lg font-bold tabular-nums">
                   {formatMoney(totals.subtotalCents)}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-grey">
-                Shipping and VAT are calculated at checkout.
-              </p>
+              <p className="mt-1 text-xs text-grey">{t("cart.drawerNote")}</p>
 
               <div className="mt-4 grid gap-2">
                 <Button asChild size="lg" className="up-sm h-12 font-semibold">
                   <Link href="/checkout" onClick={() => setOpen(false)}>
-                    Checkout
+                    {t("cart.checkout")}
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="up-sm h-11 font-semibold">
                   <Link href="/cart" onClick={() => setOpen(false)}>
-                    View bag
+                    {t("cart.viewBag")}
                   </Link>
                 </Button>
               </div>

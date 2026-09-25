@@ -6,8 +6,13 @@ import type { NextConfig } from "next";
  * It ships as Report-Only: the browser logs every violation to the console but
  * blocks nothing. A CSP that is wrong by one host breaks checkout or the 3D
  * viewer silently, so watch the console on a real deployment first — shop,
- * sign in with Google, pay on Paymob, open a 3D view — then rename the header
- * below to `Content-Security-Policy` to enforce it.
+ * sign in with Google, pay on Paymob, open a 3D view.
+ *
+ * Once nothing is reported, set `CSP_ENFORCE=1` in the environment and redeploy
+ * to switch the header from reporting to blocking. It is an environment
+ * variable rather than an edit here so that enforcement can be turned back off
+ * from the Vercel dashboard in the minute after it breaks something, without a
+ * commit and a rebuild.
  */
 const csp = [
   "default-src 'self'",
@@ -36,7 +41,13 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
-  { key: "Content-Security-Policy-Report-Only", value: csp },
+  {
+    key:
+      process.env.CSP_ENFORCE === "1"
+        ? "Content-Security-Policy"
+        : "Content-Security-Policy-Report-Only",
+    value: csp,
+  },
 ];
 
 const nextConfig: NextConfig = {

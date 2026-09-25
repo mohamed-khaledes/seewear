@@ -9,6 +9,7 @@ import {
   fetchWishlistIds,
   toggleWishlistItem,
 } from "@/features/wishlist/services/api/wishlist.client";
+import { useT } from "@/lib/i18n";
 
 export function useWishlistIds(enabled: boolean) {
   return useQuery({
@@ -20,6 +21,7 @@ export function useWishlistIds(enabled: boolean) {
 }
 
 export function useToggleWishlist() {
+  const t = useT();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -44,18 +46,18 @@ export function useToggleWishlist() {
       queryClient.setQueryData(queryKeys.wishlist.ids(), context?.previous);
 
       if (error instanceof Error && error.message === "not-authenticated") {
-        toast("Sign in to save pieces", {
-          description: "Your wishlist follows your account.",
+        toast(t("wishlist.signInFirst"), {
+          description: t("wishlist.followsAccount"),
           action: { label: "Sign in", onClick: () => router.push("/login?next=/wishlist") },
         });
         return;
       }
 
-      toast.error("Could not update your wishlist. Try again.");
+      toast.error(t("wishlist.couldNotUpdate"));
     },
 
     onSuccess: (_result, { wanted }) => {
-      toast.success(wanted ? "Saved to wishlist" : "Removed from wishlist");
+      toast.success(wanted ? t("wishlist.saved") : t("wishlist.removed"));
     },
 
     onSettled: () => {

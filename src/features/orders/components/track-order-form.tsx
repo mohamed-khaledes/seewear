@@ -22,7 +22,8 @@ import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 import { OrderTimeline } from "@/features/orders/components/order-timeline";
 import { trackOrderAction } from "@/features/orders/services/api/track-actions";
-import { orderStatusMeta } from "@/features/orders/services/utils/status";
+import { useT } from "@/lib/i18n";
+import { orderStatusMeta, statusLabel } from "@/features/orders/services/utils/status";
 import {
   trackOrderSchema,
   type TrackedOrder,
@@ -36,6 +37,7 @@ import {
  * wrong, so this cannot be walked through the order-number sequence.
  */
 export function TrackOrderForm({ defaultOrderNumber = "" }: { defaultOrderNumber?: string }) {
+  const t = useT();
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [searching, setSearching] = useState(false);
 
@@ -55,7 +57,7 @@ export function TrackOrderForm({ defaultOrderNumber = "" }: { defaultOrderNumber
       }
     } catch {
       form.setError("orderNumber", {
-        message: "That did not go through. Try again in a moment.",
+        message: t("track.error"),
       });
     } finally {
       setSearching(false);
@@ -77,7 +79,7 @@ export function TrackOrderForm({ defaultOrderNumber = "" }: { defaultOrderNumber
           name="orderNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Order number</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("track.orderNumber")}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
@@ -87,7 +89,7 @@ export function TrackOrderForm({ defaultOrderNumber = "" }: { defaultOrderNumber
                 />
               </FormControl>
               <FormDescription className="text-xs text-grey">
-                It is at the top of your confirmation email.
+                {t("track.orderHint")}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -99,18 +101,18 @@ export function TrackOrderForm({ defaultOrderNumber = "" }: { defaultOrderNumber
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Email</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("common.email")}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   type="email"
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder={t("common.emailPlaceholder")}
                   className="h-12"
                 />
               </FormControl>
               <FormDescription className="text-xs text-grey">
-                The address you checked out with.
+                {t("track.emailHint")}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -124,7 +126,7 @@ export function TrackOrderForm({ defaultOrderNumber = "" }: { defaultOrderNumber
           className="up-sm h-12 justify-center font-semibold"
         >
           {searching ? <Loader2 className="animate-spin" /> : <Search />}
-          {searching ? "Looking" : "Find my order"}
+          {searching ? t("track.looking") : t("track.find")}
         </Button>
       </form>
     </Form>
@@ -138,6 +140,7 @@ function TrackedOrderView({
   order: TrackedOrder;
   onReset: () => void;
 }) {
+  const t = useT();
   const meta = orderStatusMeta[order.status];
 
   return (
@@ -145,16 +148,16 @@ function TrackedOrderView({
       <section className="border border-line bg-paper p-6 lg:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="up-xs text-grey-2">Order</p>
+            <p className="up-xs text-grey-2">{t("track.orderNumber")}</p>
             <h2 className="mt-1.5 text-2xl font-bold tabular-nums tracking-tight">
               {order.orderNumber}
             </h2>
             <p className="up-xs mt-2 text-grey">
-              Placed {formatDate(order.createdAt)}
-              {order.shippingTo ? ` · to ${order.shippingTo}` : ""}
+              {t("track.placedOn", { date: formatDate(order.createdAt) })}
+              {order.shippingTo ? ` · ${order.shippingTo}` : ""}
             </p>
           </div>
-          <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
+          <StatusPill tone={meta.tone}>{statusLabel(t, order.status)}</StatusPill>
         </div>
 
         <div className="mt-7 border-t border-line pt-7">
@@ -165,12 +168,13 @@ function TrackedOrderView({
             courier={order.courier}
             trackingNumber={order.trackingNumber}
             trackingUrl={order.trackingUrl}
+            t={t}
           />
         </div>
       </section>
 
       <section className="border border-line bg-paper p-6 lg:p-8">
-        <h3 className="up-sm mb-4 text-grey-2">In this order</h3>
+        <h3 className="up-sm mb-4 text-grey-2">{t("track.inThisOrder")}</h3>
         <ul className="divide-y divide-line">
           {order.items.map((item, index) => (
             <li key={index} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
@@ -195,8 +199,8 @@ function TrackedOrderView({
                   <p className="text-sm font-semibold">{item.name}</p>
                 )}
                 <p className="up-xs mt-1 text-grey-2">
-                  {[item.color, item.size].filter(Boolean).join(" · ") || "One size"} · Qty{" "}
-                  {item.quantity}
+                  {[item.color, item.size].filter(Boolean).join(" · ") || t("common.oneSize")}{" "}
+                  · {t("track.qty", { count: item.quantity })}
                 </p>
               </div>
             </li>
@@ -212,10 +216,10 @@ function TrackedOrderView({
           onClick={onReset}
           className="up-sm h-12 font-semibold"
         >
-          Track another order
+          {t("track.trackAnother")}
         </Button>
         <Button asChild size="lg" variant="ghost" className="up-sm h-12 font-semibold">
-          <Link href="/help/contact">Something looks wrong</Link>
+          <Link href="/help/contact">{t("track.somethingWrong")}</Link>
         </Button>
       </div>
     </div>

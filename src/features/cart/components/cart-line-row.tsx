@@ -8,6 +8,7 @@ import { cn, formatMoney } from "@/lib/utils";
 import type { CartLine } from "@/features/cart/types";
 import { modelForSlugColor } from "@/features/products/services/utils/variants";
 import { useViewer3DStore } from "@/stores/viewer-3d-store";
+import { useT } from "@/lib/i18n";
 
 type CartLineRowProps = {
   line: CartLine;
@@ -22,6 +23,7 @@ export function CartLineRow({
   onRemove,
   compact = false,
 }: CartLineRowProps) {
+  const t = useT();
   const enabled = useViewer3DStore((state) => state.enabled);
   const hydrated = useViewer3DStore((state) => state.hydrated);
   const openPeek = useViewer3DStore((state) => state.openPeek);
@@ -61,8 +63,8 @@ export function CartLineRow({
                 side: "left",
               })
             }
-            aria-label={`See ${line.name} in 3D`}
-            className="up-xs absolute -bottom-1.5 -right-1.5 hidden items-center gap-1 border border-line bg-paper px-1.5 py-1 text-grey-2 shadow-sm transition-colors hover:border-ink hover:text-ink lg:flex"
+            aria-label={`${t("product.turnItAround")} — ${line.name}`}
+            className="up-xs absolute -bottom-1.5 -end-1.5 hidden items-center gap-1 border border-line bg-paper px-1.5 py-1 text-grey-2 shadow-sm transition-colors hover:border-ink hover:text-ink lg:flex"
           >
             <Box className="size-3" strokeWidth={2} />
             3D
@@ -87,7 +89,7 @@ export function CartLineRow({
           <button
             type="button"
             onClick={() => onRemove(line.variantId)}
-            aria-label={`Remove ${line.name} from bag`}
+            aria-label={t("cart.remove", { name: line.name })}
             className="-m-1 rounded p-1 text-grey transition-colors hover:text-ink"
           >
             <X className="size-4" />
@@ -99,7 +101,7 @@ export function CartLineRow({
             <button
               type="button"
               onClick={() => onQuantityChange(line.variantId, line.quantity - 1)}
-              aria-label="Decrease quantity"
+              aria-label={t("cart.decrease")}
               className="grid size-8 place-items-center text-grey-2 transition-colors hover:text-ink"
             >
               <Minus className="size-3.5" />
@@ -111,14 +113,14 @@ export function CartLineRow({
               type="button"
               disabled={atStockCeiling}
               onClick={() => onQuantityChange(line.variantId, line.quantity + 1)}
-              aria-label="Increase quantity"
+              aria-label={t("cart.increase")}
               className="grid size-8 place-items-center text-grey-2 transition-colors hover:text-ink disabled:opacity-30"
             >
               <Plus className="size-3.5" />
             </button>
           </div>
 
-          <div className="text-right">
+          <div className="text-end">
             <p className="text-sm font-semibold tabular-nums">
               {formatMoney(line.priceCents * line.quantity)}
             </p>

@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/lib/i18n";
 import { ProductGrid } from "@/features/products/components/product-grid";
 import { useProductsInfinite } from "@/features/products/hooks/use-products";
 import { useInfiniteScroll } from "@/features/products/hooks/use-infinite-scroll";
@@ -17,6 +18,7 @@ export function ProductResults({
   filters: ProductFilters;
   initialPage: ProductPage;
 }) {
+  const t = useT();
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useProductsInfinite(filters, initialPage);
 
@@ -32,21 +34,18 @@ export function ProductResults({
 
   if (isError) {
     return (
-      <EmptyState
-        title="We could not load the rail"
-        body="Something went wrong reaching the catalogue. Refresh, and it will usually come back."
-      />
+      <EmptyState title={t("listing.errorTitle")} body={t("listing.errorBody")} />
     );
   }
 
   if (products.length === 0) {
     return (
       <EmptyState
-        title="Nothing matches that yet"
-        body="Loosen a filter or two — the catalogue is smaller than it looks."
+        title={t("listing.emptyTitle")}
+        body={t("listing.emptyBody")}
         action={
           <Button asChild variant="outline" size="lg" className="up-sm font-semibold">
-            <Link href="/products">See everything</Link>
+            <Link href="/products">{t("listing.seeEverything")}</Link>
           </Button>
         }
       />
@@ -76,17 +75,16 @@ export function ProductResults({
             {isFetchingNextPage ? (
               <>
                 <Loader2 className="animate-spin" />
-                Loading
+                {t("common.loading")}
               </>
             ) : (
-              "Load more"
+              t("listing.loadMore")
             )}
           </Button>
         </div>
       ) : (
         <p className="up-xs border-t border-line bg-paper py-8 text-center text-grey">
-          {products.length} {products.length === 1 ? "piece" : "pieces"} — that is
-          everything
+          {t("listing.thatIsEverything", { count: products.length })}
         </p>
       )}
     </>

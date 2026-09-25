@@ -11,6 +11,7 @@ import {
   sellerFromSettings,
 } from "@/features/orders/server";
 import { getAdminOrder } from "@/features/dashboard/services/api/dashboard.server";
+import { BULK_ORDER_LIMIT, type AdminOrderDetail } from "@/features/dashboard/types";
 
 export async function AdminInvoicePage({ orderId }: { orderId: string }) {
   const [order, settings] = await Promise.all([getAdminOrder(orderId), getStoreSettings()]);
@@ -37,21 +38,56 @@ export async function PackingSlipPage({ orderId }: { orderId: string }) {
   const order = await getAdminOrder(orderId);
   if (!order) notFound();
 
+  return (
+    <div className="px-5 py-8 print:p-0 lg:px-8">
+      <InvoiceToolbar backHref={`/dashboard/orders/${order.id}`} backLabel={order.order_number} />
+      <PackingSlip order={order} />
+    </div>
+  );
+}
+
+/**
+ * Several slips on one sheet run, for the morning's parcels. Each one starts a
+ * new printed page, so the stack comes out of the printer in the order it was
+ * picked. Ids that no longer exist are simply not printed: a deleted order in
+ * the middle of a selection should not cost the packer the other nineteen.
+ */
+export async function PackingSlipsBatchPage({ ids }: { ids: string[] }) {
+  const wanted = ids.slice(0, BULK_ORDER_LIMIT);
+  const found = (await Promise.all(wanted.map((id) => getAdminOrder(id)))).filter(
+    (order) => order !== null,
+  );
+
+  if (found.length === 0) notFound();
+
+  return (
+    <div className="px-5 py-8 print:p-0 lg:px-8">
+      <InvoiceToolbar
+        backHref="/dashboard/orders"
+        backLabel={`${found.length} packing ${found.length === 1 ? "slip" : "slips"}`}
+      />
+      {found.map((order) => (
+        <div key={order.id} className="mb-8 print:mb-0 print:break-after-page">
+          <PackingSlip order={order} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PackingSlip({ order }: { order: AdminOrderDetail }) {
   const address = readShippingAddress(order.shipping_address);
   const units = order.items.reduce((count, item) => count + item.quantity, 0);
   const collect = order.payment_method === "cod" ? order.total_cents - order.refunded_cents : 0;
 
   return (
-    <div className="px-5 py-8 print:p-0 lg:px-8">
-      <InvoiceToolbar backHref={`/dashboard/orders/${order.id}`} backLabel={order.order_number} />
-
-      <article className="mx-auto w-full max-w-[210mm] bg-white p-8 text-ink shadow-sm print:max-w-none print:p-0 print:shadow-none sm:p-12">
+    <article className="mx-auto w-full max-w-[210mm] bg-white p-8 text-ink shadow-sm print:max-w-none print:p-0 print:shadow-none sm:p-12">
         <header className="flex flex-wrap items-start justify-between gap-6 border-b-2 border-ink pb-6">
           <div>
             <p className="text-2xl font-bold uppercase tracking-[0.3em]">{siteConfig.name}</p>
             <p className="up-xs mt-2 text-grey-2">Packing slip</p>
           </div>
-          <div className="text-right">
+          <div className="text-end">
             <p className="font-mono text-2xl font-bold tabular-nums">{order.order_number}</p>
             <p className="mt-1 text-xs text-grey-2">Placed {formatDate(order.created_at)}</p>
             <p className="text-xs text-grey-2">
@@ -105,13 +141,13 @@ export async function PackingSlipPage({ orderId }: { orderId: string }) {
 
         <table className="mt-6 w-full text-sm">
           <thead>
-            <tr className="border-b border-ink text-left">
+            <tr className="border-b border-ink text-start">
               <th className="up-xs w-10 pb-2 font-semibold text-grey-2">
                 <span className="sr-only">Packed</span>
               </th>
               <th className="up-xs pb-2 font-semibold text-grey-2">Item</th>
               <th className="up-xs pb-2 font-semibold text-grey-2">Colour · size</th>
-              <th className="up-xs pb-2 text-right font-semibold text-grey-2">Qty</th>
+              <th className="up-xs pb-2 text-end font-semibold text-grey-2">Qty</th>
             </tr>
           </thead>
           <tbody>
@@ -120,11 +156,11 @@ export async function PackingSlipPage({ orderId }: { orderId: string }) {
                 <td className="py-3">
                   <span className="block size-4 border-2 border-ink" aria-hidden="true" />
                 </td>
-                <td className="py-3 pr-4 font-medium">{item.name}</td>
+                <td className="py-3 pe-4 font-medium">{item.name}</td>
                 <td className="py-3 text-grey-2">
                   {[item.color, item.size].filter(Boolean).join(" · ") || "One size"}
                 </td>
-                <td className="py-3 text-right text-base font-bold tabular-nums">
+                <td className="py-3 text-end text-base font-bold tabular-nums">
                   {item.quantity}
                 </td>
               </tr>
@@ -137,7 +173,6 @@ export async function PackingSlipPage({ orderId }: { orderId: string }) {
           {siteConfig.url.replace(/^https?:\/\//, "")}/help/returns or reply to your
           confirmation email.
         </footer>
-      </article>
-    </div>
+    </article>
   );
 }

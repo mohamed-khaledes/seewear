@@ -34,14 +34,14 @@ export function AdminSearch({
 
   return (
     <form onSubmit={submit} className="relative">
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-grey" />
+      <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-grey" />
       <input
         type="search"
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-10 w-full rounded-lg border border-line bg-concrete py-2 pl-9 pr-3 text-xs outline-none transition-colors focus-visible:border-ink sm:w-56"
+        className="h-10 w-full rounded-lg border border-line bg-concrete py-2 ps-9 pe-3 text-xs outline-none transition-colors focus-visible:border-ink sm:w-56"
       />
     </form>
   );

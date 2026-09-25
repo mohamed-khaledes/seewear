@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { MessageKey, Translator } from "@/lib/i18n";
 
 /**
  * The scrolling strip under the hero. The track is duplicated so the -50%
@@ -7,12 +8,15 @@ import { cn } from "@/lib/utils";
  */
 export function Marquee({
   items,
+  t,
   className,
 }: {
-  items: readonly string[];
+  /** Keys, not words: the strip scrolls in whichever language the page is in. */
+  items: readonly MessageKey[];
+  t: Translator;
   className?: string;
 }) {
-  const track = [...items, ...items, ...items, ...items];
+  const track = [...items, ...items, ...items, ...items].map((key) => t(key));
 
   return (
     <div

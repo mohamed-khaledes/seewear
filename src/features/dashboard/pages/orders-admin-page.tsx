@@ -1,21 +1,10 @@
-import Link from "next/link";
 import { Receipt } from "lucide-react";
 
-import { StatusPill } from "@/components/common/status-pill";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatDateTime, formatMoney } from "@/lib/utils";
-import { orderStatusMeta } from "@/features/orders";
 import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topbar";
 import { EmptyPanelState } from "@/features/dashboard/components/panel";
 import { ExportForm } from "@/features/dashboard/components/export-form";
 import { FilterChips } from "@/features/dashboard/components/filter-chips";
+import { OrderTable } from "@/features/dashboard/components/order-table";
 import {
   getAdminOrderCounts,
   getAdminOrders,
@@ -72,53 +61,7 @@ export async function OrdersAdminPage({
           />
         ) : (
           <div className="overflow-hidden rounded-xl border border-line bg-paper">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead className="hidden md:table-cell">Placed</TableHead>
-                  <TableHead className="hidden sm:table-cell">Items</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.rows.map((order) => {
-                  const meta = orderStatusMeta[order.status];
-                  return (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-bold tabular-nums">
-                        <Link
-                          href={`/dashboard/orders/${order.id}`}
-                          className="hover:underline"
-                        >
-                          {order.order_number}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <span className="block text-[12.5px] font-semibold">
-                          {order.customer}
-                        </span>
-                        <span className="text-[11px] text-grey">{order.email}</span>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs text-grey-2">
-                        {formatDateTime(order.created_at)}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell tabular-nums">
-                        {order.item_count}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {formatMoney(order.total_cents)}
-                      </TableCell>
-                      <TableCell>
-                        <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <OrderTable orders={orders.rows} />
             <TablePagination
               page={orders.page}
               totalPages={orders.totalPages}

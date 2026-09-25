@@ -4,19 +4,21 @@ import { AuthShell } from "@/features/auth/components/auth-shell";
 import { DemoLoginButtons } from "@/features/auth/components/demo-login-buttons";
 import { GoogleButton } from "@/features/auth/components/google-button";
 import { LoginForm } from "@/features/auth/components/login-form";
+import { getT } from "@/lib/i18n/server";
 
-export function LoginPage({ next }: { next?: string }) {
+export async function LoginPage({ next }: { next?: string }) {
+  const t = await getT();
   const signupHref = next ? `/signup?next=${encodeURIComponent(next)}` : "/signup";
 
   return (
     <AuthShell
-      eyebrow="Welcome back"
-      title="Sign in"
+      eyebrow={t("auth.welcomeBack")}
+      title={t("auth.signIn")}
       footer={
         <>
-          New here?{" "}
+          {t("auth.newHere")}{" "}
           <Link href={signupHref} className="font-medium text-ink underline underline-offset-4">
-            Create an account
+            {t("auth.createAccount")}
           </Link>
         </>
       }
@@ -26,11 +28,11 @@ export function LoginPage({ next }: { next?: string }) {
 
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-line" />
-          <span className="up-xs text-grey">or</span>
+          <span className="up-xs text-grey">{t("auth.or")}</span>
           <span className="h-px flex-1 bg-line" />
         </div>
 
-        <GoogleButton next={next} label="Continue with Google" />
+        <GoogleButton next={next} label={t("auth.continueWithGoogle")} />
 
         <LoginForm next={next} />
       </div>

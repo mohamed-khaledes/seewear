@@ -7,6 +7,7 @@ import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/config/site";
+import { useT } from "@/lib/i18n";
 import { useSessionUser } from "@/features/auth/components/session-provider";
 import type { SavedAddress } from "@/features/auth";
 import { useCart } from "@/features/cart/hooks/use-cart";
@@ -15,6 +16,7 @@ import { OrderSummary } from "@/features/checkout/components/order-summary";
 import type { DiscountPreview } from "@/features/checkout/types";
 
 export function CheckoutPage({ savedAddresses = [] }: { savedAddresses?: SavedAddress[] }) {
+  const t = useT();
   const { items, hydrated, clear, rules } = useCart();
   const user = useSessionUser();
   const [discount, setDiscount] = useState<DiscountPreview | null>(null);
@@ -40,12 +42,10 @@ export function CheckoutPage({ savedAddresses = [] }: { savedAddresses?: SavedAd
     return (
       <div className="bg-paper px-6 py-28 text-center">
         <ShoppingBag className="mx-auto size-8 text-grey" strokeWidth={1.3} />
-        <h1 className="mt-4 text-lg font-semibold">There is nothing to check out</h1>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-grey-2">
-          Add a piece to your bag and this page will have something to price.
-        </p>
+        <h1 className="mt-4 text-lg font-semibold">{t("checkout.emptyTitle")}</h1>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-grey-2">{t("checkout.emptyBody")}</p>
         <Button asChild size="lg" className="up-sm mt-6 h-12 px-8 font-semibold">
-          <Link href="/products">Start shopping</Link>
+          <Link href="/products">{t("common.startShopping")}</Link>
         </Button>
       </div>
     );
@@ -61,13 +61,15 @@ export function CheckoutPage({ savedAddresses = [] }: { savedAddresses?: SavedAd
           {siteConfig.name}
         </Link>
 
-        <nav aria-label="Checkout steps" className="up-xs mb-6 text-grey-2">
+        <nav aria-label={t("checkout.stepsLabel")} className="up-xs mb-6 text-grey-2">
           <Link href="/cart" className="hover:text-ink">
-            Cart
+            {t("checkout.stepCart")}
           </Link>{" "}
-          ›{" "}
-          <span className="font-semibold text-ink">Information &amp; payment</span> ›
-          Confirmation
+          <span className="rtl:hidden">›</span>
+          <span className="hidden rtl:inline">‹</span>{" "}
+          <span className="font-semibold text-ink">{t("checkout.stepInfo")}</span>{" "}
+          <span className="rtl:hidden">›</span>
+          <span className="hidden rtl:inline">‹</span> {t("checkout.stepConfirmation")}
         </nav>
 
         <CheckoutForm

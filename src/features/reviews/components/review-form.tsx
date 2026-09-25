@@ -21,8 +21,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { submitReviewAction } from "@/features/reviews/services/api/review-actions";
 import { reviewSchema, type Review, type ReviewValues } from "@/features/reviews/types";
+import { useT } from "@/lib/i18n";
 
-const LABELS = ["", "Not for me", "Disappointing", "Fine", "Good", "Excellent"];
+/** One label per star, keyed so both languages describe the same five. */
+const LABEL_KEYS = [
+  null,
+  "reviews.star1",
+  "reviews.star2",
+  "reviews.star3",
+  "reviews.star4",
+  "reviews.star5",
+] as const;
 
 export function ReviewForm({
   productId,
@@ -33,9 +42,16 @@ export function ReviewForm({
   productSlug: string;
   existing?: Review;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [hover, setHover] = useState(0);
+
+  /** Star count to words. Zero has none, which is why the list starts null. */
+  const starLabel = (stars: number) => {
+    const key = LABEL_KEYS[stars];
+    return key ? t(key) : "";
+  };
 
   const form = useForm<ReviewValues>({
     resolver: zodResolver(reviewSchema),
@@ -54,7 +70,7 @@ export function ReviewForm({
     startTransition(async () => {
       const result = await submitReviewAction(values, productSlug);
       if (result.ok) {
-        toast.success(existing ? "Review updated" : "Thanks — your review is live");
+        toast.success(existing ? t("reviews.updated") : t("reviews.published"));
         router.refresh();
       } else {
         toast.error(result.error);
@@ -70,7 +86,7 @@ export function ReviewForm({
           name="rating"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Your rating</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("reviews.rating")}</FormLabel>
               <FormControl>
                 <div
                   role="radiogroup"
@@ -84,7 +100,7 @@ export function ReviewForm({
                       type="button"
                       role="radio"
                       aria-checked={field.value === value}
-                      aria-label={`${value} — ${LABELS[value]}`}
+                      aria-label={`${value} — ${starLabel(value)}`}
                       onMouseEnter={() => setHover(value)}
                       onClick={() => field.onChange(value)}
                       className="rounded p-0.5 focus-visible:outline-2 focus-visible:outline-ink"
@@ -98,7 +114,7 @@ export function ReviewForm({
                       />
                     </button>
                   ))}
-                  <span className="ml-2 text-xs text-grey-2">{LABELS[shown]}</span>
+                  <span className="ms-2 text-xs text-grey-2">{starLabel(shown)}</span>
                 </div>
               </FormControl>
               <FormMessage />
@@ -111,9 +127,9 @@ export function ReviewForm({
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Headline (optional)</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("reviews.headline")}</FormLabel>
               <FormControl>
-                <Input className="h-11" placeholder="Runs true to size" {...field} />
+                <Input className="h-11" placeholder={t("reviews.star4")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -125,11 +141,11 @@ export function ReviewForm({
           name="body"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">What you thought (optional)</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("reviews.body")}</FormLabel>
               <FormControl>
                 <Textarea
                   rows={4}
-                  placeholder="Fit, fabric, how it wears after a few washes."
+                  placeholder={t("reviews.bodyPlaceholder")}
                   className="resize-y"
                   {...field}
                 />
@@ -146,7 +162,7 @@ export function ReviewForm({
           className="up-sm h-12 w-full font-semibold sm:w-fit sm:px-10"
         >
           {pending ? <Loader2 className="animate-spin" /> : null}
-          {existing ? "Update review" : "Publish review"}
+          {existing ? t("reviews.update") : t("reviews.publish")}
         </Button>
       </form>
     </Form>

@@ -98,7 +98,7 @@ export function ProductTable({ products }: { products: AdminProductRow[] }) {
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="ml-auto text-xs text-grey-2 hover:text-ink"
+            className="ms-auto text-xs text-grey-2 hover:text-ink"
           >
             Clear
           </button>
@@ -246,7 +246,7 @@ function ProductRow({
       <TableCell className="tabular-nums">
         {formatMoney(product.price_cents)}
         {product.on_sale && product.compare_at_cents ? (
-          <span className="ml-1.5 text-[11px] text-grey line-through">
+          <span className="ms-1.5 text-[11px] text-grey line-through">
             {formatMoney(product.compare_at_cents)}
           </span>
         ) : null}

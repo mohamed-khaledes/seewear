@@ -15,6 +15,7 @@ import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topba
 import { OrderActions } from "@/features/dashboard/components/order-actions";
 import { OrderStatusForm } from "@/features/dashboard/components/order-status-form";
 import { Panel } from "@/features/dashboard/components/panel";
+import { getCourierDriver } from "@/lib/courier";
 import { getAdminOrder } from "@/features/dashboard/services/api/dashboard.server";
 
 export async function OrderAdminDetailPage({ orderId }: { orderId: string }) {
@@ -23,6 +24,9 @@ export async function OrderAdminDetailPage({ orderId }: { orderId: string }) {
 
   const address = readShippingAddress(order.shipping_address);
   const meta = orderStatusMeta[order.status];
+  // Null unless this deployment has a courier account connected, in which case
+  // the parcel can be booked from here instead of typed in by hand.
+  const courier = getCourierDriver();
 
   return (
     <>
@@ -37,6 +41,8 @@ export async function OrderAdminDetailPage({ orderId }: { orderId: string }) {
             totalCents={order.total_cents}
             refundedCents={order.refunded_cents}
             stockHeld={order.stock_held}
+            courierLabel={courier?.label ?? null}
+            shipmentId={order.shipment_id}
           />
         }
       />

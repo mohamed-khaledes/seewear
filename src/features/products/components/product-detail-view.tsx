@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { cn, discountPercent, formatMoney } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { useAddToBag, usePricingRules } from "@/features/cart";
 import { useSessionUser } from "@/features/auth";
 import { WishlistButton } from "@/features/wishlist";
@@ -31,6 +32,7 @@ import { toCartLine } from "@/features/products/services/utils/to-cart-line";
 import { ProductStage } from "@/features/products/components/product-stage";
 
 export function ProductDetailView({ product }: { product: ProductDetail }) {
+  const t = useT();
   const colors = useMemo(() => colorOptions(product), [product]);
   const [color, setColor] = useState<string | null>(
     colors.find((option) => option.inStock)?.name ?? colors[0]?.name ?? null,
@@ -75,13 +77,13 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
       </div>
 
       <div className="bg-paper px-5 py-8 lg:px-10 lg:py-12">
-        <nav aria-label="Breadcrumb" className="up-xs flex items-center gap-1 text-grey-2">
+        <nav aria-label={t("product.breadcrumb")} className="up-xs flex items-center gap-1 text-grey-2">
           <Link href="/products" className="hover:text-ink">
-            Shop
+            {t("nav.shop")}
           </Link>
           {product.category ? (
             <>
-              <ChevronRight className="size-3" />
+              <ChevronRight className="size-3 rtl:-scale-x-100" />
               <Link
                 href={`/products?category=${product.category.slug}`}
                 className="hover:text-ink"
@@ -103,7 +105,9 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
             className="text-lg"
           />
           {off ? (
-            <span className="up-xs font-semibold text-sale">{off}% off</span>
+            <span className="up-xs font-semibold text-sale">
+              {t("product.percentOff", { percent: off })}
+            </span>
           ) : null}
         </div>
 
@@ -116,7 +120,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
         {colors.length > 0 ? (
           <fieldset className="mt-8">
             <legend className="up-xs mb-3 text-grey-2">
-              Colour — <span className="text-ink">{color}</span>
+              {t("product.colour")} — <span className="text-ink">{color}</span>
             </legend>
             <div className="flex flex-wrap gap-2">
               {colors.map((option) => (
@@ -144,9 +148,9 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
         {sizes.length > 0 ? (
           <fieldset className="mt-7">
             <legend className="up-xs mb-3 flex w-full items-center justify-between text-grey-2">
-              <span>Size</span>
+              <span>{t("product.size")}</span>
               <Link href="/help/size-guide" className="underline underline-offset-2">
-                Size guide
+                {t("product.sizeGuide")}
               </Link>
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -158,7 +162,11 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
                   type="button"
                   onClick={() => setSize(option.name)}
                   aria-pressed={size === option.name}
-                  aria-label={option.stock === 0 ? `${option.name}, sold out` : option.name}
+                  aria-label={
+                    option.stock === 0
+                      ? `${option.name} — ${t("product.soldOut")}`
+                      : option.name
+                  }
                   className={cn(
                     "up-xs min-w-14 border px-3 py-3 font-semibold transition-colors",
                     size === option.name
@@ -174,7 +182,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
             </div>
             {variant && variant.stock > 0 && variant.stock <= 5 ? (
               <p className="up-xs mt-3 text-warn">
-                Only {variant.stock} left in this size
+                {t("product.onlyLeft", { count: variant.stock })}
               </p>
             ) : null}
           </fieldset>
@@ -187,7 +195,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
             onClick={add}
             className="up-sm h-12 flex-1 font-semibold"
           >
-            {soldOut ? "Sold out" : "Add to bag"}
+            {soldOut ? t("product.soldOut") : t("product.addToBag")}
           </Button>
           <WishlistButton
             productId={product.id}
@@ -209,15 +217,18 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
 
         <p className="up-xs mt-4 flex items-center gap-2 text-grey-2">
           <Truck className="size-3.5" />
-          Free express shipping over {formatMoney(rules.freeShippingThresholdCents)}
+          {t("product.freeShippingOver", {
+            amount: formatMoney(rules.freeShippingThresholdCents),
+          })}
         </p>
 
         <Accordion type="single" collapsible className="mt-8 border-t border-line">
           <AccordionItem value="details">
-            <AccordionTrigger className="up-sm font-semibold">Details</AccordionTrigger>
+            <AccordionTrigger className="up-sm font-semibold">
+              {t("product.details")}
+            </AccordionTrigger>
             <AccordionContent className="text-sm leading-relaxed text-grey-2">
-              {product.description ??
-                "Cut and finished to last. Full fabric and care notes land with the piece."}
+              {product.description ?? t("product.detailsBody")}
               {variant?.sku ? (
                 <span className="mt-2 block text-xs text-grey">SKU {variant.sku}</span>
               ) : null}
@@ -225,12 +236,12 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
           </AccordionItem>
           <AccordionItem value="shipping">
             <AccordionTrigger className="up-sm font-semibold">
-              Shipping &amp; returns
+              {t("product.shippingReturns")}
             </AccordionTrigger>
             <AccordionContent className="text-sm leading-relaxed text-grey-2">
-              Express delivery across Egypt in two to four working days. Free over{" "}
-              {formatMoney(rules.freeShippingThresholdCents)}. Unworn pieces can be
-              returned within 14 days.
+              {t("product.shippingBody", {
+                amount: formatMoney(rules.freeShippingThresholdCents),
+              })}
             </AccordionContent>
           </AccordionItem>
         </Accordion>

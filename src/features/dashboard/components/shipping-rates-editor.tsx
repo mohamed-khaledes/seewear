@@ -120,7 +120,7 @@ export function ShippingRatesEditor({
                 value={draft.rate}
                 onChange={(event) => update(governorate, { rate: event.target.value })}
                 aria-label={`${governorate} rate in EGP`}
-                className="h-9 text-right tabular-nums"
+                className="h-9 text-end tabular-nums"
               />
               <Input
                 type="text"

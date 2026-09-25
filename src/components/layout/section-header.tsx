@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 export function SectionHeader({
   title,
   href,
-  linkLabel = "View all",
+  linkLabel,
   className,
 }: {
   title: string;
   href?: string;
-  linkLabel?: string;
+  linkLabel: string;
   className?: string;
 }) {
   return (

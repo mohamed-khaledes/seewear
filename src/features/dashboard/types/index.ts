@@ -58,6 +58,7 @@ export type AdminOrderRow = Pick<
   | "order_number"
   | "email"
   | "status"
+  | "payment_method"
   | "total_cents"
   | "created_at"
   | "fulfilled_at"
@@ -258,3 +259,19 @@ export type AdminPage<T> = {
   perPage: number;
   totalPages: number;
 };
+
+/* ------------------------------------------------------- bulk order moves */
+
+/**
+ * The only moves worth making to a stack of orders at once, and how many rows
+ * one click may touch. A screenful, not a migration.
+ *
+ * These live here rather than beside the action because a `"use server"` file
+ * may only export async functions, and the table needs the same vocabulary.
+ */
+export const BULK_ORDER_TARGETS = ["fulfilled", "delivered"] as const;
+export type BulkOrderTarget = (typeof BULK_ORDER_TARGETS)[number];
+export const BULK_ORDER_LIMIT = 50;
+
+/** What a bulk move did: what moved, and what the rules would not let move. */
+export type BulkOutcome = { moved: number; skipped: number };

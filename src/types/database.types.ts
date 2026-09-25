@@ -226,6 +226,8 @@ export type Database = {
           restocked_at: string | null;
           refunded_cents: number;
           invoice_number: string | null;
+          shipment_provider: string | null;
+          shipment_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -254,6 +256,8 @@ export type Database = {
           restocked_at?: string | null;
           refunded_cents?: number;
           invoice_number?: string | null;
+          shipment_provider?: string | null;
+          shipment_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -282,6 +286,8 @@ export type Database = {
           restocked_at?: string | null;
           refunded_cents?: number;
           invoice_number?: string | null;
+          shipment_provider?: string | null;
+          shipment_id?: string | null;
           created_at?: string;
         };
         Relationships: [

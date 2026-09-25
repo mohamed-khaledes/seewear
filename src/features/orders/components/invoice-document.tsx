@@ -77,7 +77,7 @@ export function InvoiceDocument({
             <span>{seller.email}</span>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <p className="up-xs text-grey-2">Tax invoice</p>
           <p className="mt-1 font-mono text-lg font-bold tabular-nums">
             {order.invoice_number ?? "Not yet issued"}
@@ -137,17 +137,17 @@ export function InvoiceDocument({
 
       <table className="mt-6 w-full text-sm">
         <thead>
-          <tr className="border-b border-ink text-left">
+          <tr className="border-b border-ink text-start">
             <th className="up-xs pb-2 font-semibold text-grey-2">Item</th>
-            <th className="up-xs pb-2 text-right font-semibold text-grey-2">Qty</th>
-            <th className="up-xs pb-2 text-right font-semibold text-grey-2">Unit</th>
-            <th className="up-xs pb-2 text-right font-semibold text-grey-2">Amount</th>
+            <th className="up-xs pb-2 text-end font-semibold text-grey-2">Qty</th>
+            <th className="up-xs pb-2 text-end font-semibold text-grey-2">Unit</th>
+            <th className="up-xs pb-2 text-end font-semibold text-grey-2">Amount</th>
           </tr>
         </thead>
         <tbody>
           {order.items.map((item) => (
             <tr key={item.id} className="border-b border-line align-top">
-              <td className="py-3 pr-4">
+              <td className="py-3 pe-4">
                 <span className="font-medium">{item.name}</span>
                 {[item.color, item.size].filter(Boolean).length ? (
                   <span className="block text-xs text-grey-2">
@@ -155,9 +155,9 @@ export function InvoiceDocument({
                   </span>
                 ) : null}
               </td>
-              <td className="py-3 text-right tabular-nums">{item.quantity}</td>
-              <td className="py-3 text-right tabular-nums">{formatMoney(item.price_cents)}</td>
-              <td className="py-3 text-right tabular-nums">
+              <td className="py-3 text-end tabular-nums">{item.quantity}</td>
+              <td className="py-3 text-end tabular-nums">{formatMoney(item.price_cents)}</td>
+              <td className="py-3 text-end tabular-nums">
                 {formatMoney(item.price_cents * item.quantity)}
               </td>
             </tr>
@@ -165,7 +165,7 @@ export function InvoiceDocument({
         </tbody>
       </table>
 
-      <dl className="ml-auto mt-6 grid w-full max-w-72 gap-1.5 text-sm">
+      <dl className="ms-auto mt-6 grid w-full max-w-72 gap-1.5 text-sm">
         <Line label="Subtotal" value={formatMoney(order.subtotal_cents)} />
         {order.discount_cents > 0 ? (
           <Line

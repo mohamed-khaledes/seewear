@@ -9,6 +9,7 @@ import { cn, formatMoney, toEgp, toPiastres } from "@/lib/utils";
 import { useCatalogFacets, useCategories } from "@/features/products/hooks/use-products";
 import type { ProductFilters } from "@/features/products";
 import { useFilterNavigation } from "@/features/search/hooks/use-filter-navigation";
+import { useT } from "@/lib/i18n";
 
 export function FilterPanel({
   filters,
@@ -17,6 +18,7 @@ export function FilterPanel({
   filters: ProductFilters;
   className?: string;
 }) {
+  const t = useT();
   const { data: facets, isLoading: facetsLoading } = useCatalogFacets();
   const { data: categories } = useCategories();
   const { apply, toggleColor, toggleSize, setCategory, clearAll } =
@@ -24,7 +26,7 @@ export function FilterPanel({
 
   return (
     <div className={cn("grid gap-7", className)}>
-      <FilterGroup title="Category">
+      <FilterGroup title={t("filters.category")}>
         <div className="flex flex-wrap gap-1.5">
           {(categories ?? []).map((category) => (
             <Chip
@@ -38,7 +40,7 @@ export function FilterPanel({
         </div>
       </FilterGroup>
 
-      <FilterGroup title="Colour">
+      <FilterGroup title={t("filters.colour")}>
         {facetsLoading ? (
           <Skeleton className="h-8 w-full" />
         ) : (
@@ -51,7 +53,7 @@ export function FilterPanel({
                   type="button"
                   onClick={() => toggleColor(color.name)}
                   aria-pressed={active}
-                  className="flex items-center gap-2.5 py-1 text-left text-sm"
+                  className="flex items-center gap-2.5 py-1 text-start text-sm"
                 >
                   <span
                     className={cn(
@@ -63,7 +65,7 @@ export function FilterPanel({
                     style={{ background: color.hex ?? "#ddd" }}
                   />
                   <span className={cn(active && "font-semibold")}>{color.name}</span>
-                  <span className="ml-auto text-xs tabular-nums text-grey">
+                  <span className="ms-auto text-xs tabular-nums text-grey">
                     {color.count}
                   </span>
                 </button>
@@ -73,7 +75,7 @@ export function FilterPanel({
         )}
       </FilterGroup>
 
-      <FilterGroup title="Size">
+      <FilterGroup title={t("filters.size")}>
         <div className="flex flex-wrap gap-1.5">
           {(facets?.sizes ?? []).map((size) => (
             <Chip
@@ -87,7 +89,7 @@ export function FilterPanel({
         </div>
       </FilterGroup>
 
-      <FilterGroup title="Price">
+      <FilterGroup title={t("filters.price")}>
         <PriceRange
           key={`${filters.minCents}-${filters.maxCents}`}
           filters={filters}
@@ -101,13 +103,13 @@ export function FilterPanel({
         ) : null}
       </FilterGroup>
 
-      <FilterGroup title="Show">
+      <FilterGroup title={t("filters.show")}>
         <div className="flex flex-wrap gap-1.5">
           <Chip active={filters.onSale} onClick={() => apply({ onSale: !filters.onSale })}>
-            On sale
+            {t("filters.onSale")}
           </Chip>
           <Chip active={filters.inStock} onClick={() => apply({ inStock: !filters.inStock })}>
-            In stock
+            {t("filters.inStock")}
           </Chip>
         </div>
       </FilterGroup>
@@ -162,6 +164,7 @@ function PriceRange({
   filters: ProductFilters;
   onApply: (patch: Partial<ProductFilters>) => void;
 }) {
+  const t = useT();
   // Seeded from the URL; the parent remounts this with a key when the URL
   // changes, so there is no effect syncing props into state.
   const [min, setMin] = useState(() =>
@@ -188,8 +191,8 @@ function PriceRange({
         inputMode="numeric"
         value={min}
         onChange={(event) => setMin(event.target.value)}
-        placeholder="Min"
-        aria-label="Minimum price in EGP"
+        placeholder={t("filters.min")}
+        aria-label={t("filters.minPrice")}
         className="h-9"
       />
       <span className="text-grey">—</span>
@@ -197,8 +200,8 @@ function PriceRange({
         inputMode="numeric"
         value={max}
         onChange={(event) => setMax(event.target.value)}
-        placeholder="Max"
-        aria-label="Maximum price in EGP"
+        placeholder={t("filters.max")}
+        aria-label={t("filters.maxPrice")}
         className="h-9"
       />
       <Button type="submit" variant="outline" size="sm" className="h-9 shrink-0">

@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import type { MessageKey, Translator } from "@/lib/i18n";
+
 type Block = {
-  eyebrow: string;
-  title: string;
-  cta: string;
+  eyebrow: MessageKey;
+  title: MessageKey;
+  cta: MessageKey;
   href: string;
   image: string;
   alt: string;
@@ -14,18 +16,18 @@ type Block = {
 
 const BLOCKS: Block[] = [
   {
-    eyebrow: "247 Collection",
-    title: "Built for the off-hours.",
-    cta: "Shop 247",
+    eyebrow: "home.editorial1Eyebrow",
+    title: "home.editorial1Title",
+    cta: "home.editorial1Cta",
     href: "/products?category=247",
     image: "/editorial/247.webp",
     alt: "Model wearing the black Owners Club hoodie and a ribbed beanie",
     focus: "56% 26%",
   },
   {
-    eyebrow: "Outerwear",
-    title: "Winter, handled.",
-    cta: "Shop outerwear",
+    eyebrow: "home.editorial2Eyebrow",
+    title: "home.editorial2Title",
+    cta: "home.editorial2Cta",
     href: "/products?category=outerwear",
     image: "/editorial/outerwear.webp",
     alt: "Model wearing the blue check flannel overshirt",
@@ -39,7 +41,7 @@ const BLOCKS: Block[] = [
  * between two black photographs reads as a seam. The container is `bg-ink` so
  * that subpixel rounding in the two-column grid has nothing pale to leak.
  */
-export function Editorial() {
+export function Editorial({ t }: { t: Translator }) {
   return (
     <div className="grid bg-ink lg:grid-cols-2">
       {BLOCKS.map((block) => (
@@ -61,15 +63,16 @@ export function Editorial() {
             aria-hidden="true"
           />
 
-          <p className="up-xs relative opacity-75">{block.eyebrow}</p>
+          <p className="up-xs relative opacity-75">{t(block.eyebrow)}</p>
           <h2 className="relative mb-4 mt-2 max-w-[15ch] text-2xl font-bold leading-tight sm:text-[26px]">
-            {block.title}
+            {t(block.title)}
           </h2>
           <Link
             href={block.href}
             className="up-sm relative self-start border-b border-white/50 pb-1 font-medium transition-colors hover:border-white"
           >
-            {block.cta} →
+            {t(block.cta)} <span className="rtl:hidden">→</span>
+            <span className="hidden rtl:inline">←</span>
           </Link>
         </article>
       ))}

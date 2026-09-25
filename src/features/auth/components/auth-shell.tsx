@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { siteConfig } from "@/config/site";
+import { getT } from "@/lib/i18n/server";
 
 type AuthShellProps = {
   eyebrow: string;
@@ -18,7 +19,9 @@ const HERO = "/hero/hero-lineup.webp";
  * Below lg the panel would squeeze the form off-screen, so the photograph
  * becomes a band above it instead of disappearing entirely.
  */
-export function AuthShell({ eyebrow, title, children, footer }: AuthShellProps) {
+export async function AuthShell({ eyebrow, title, children, footer }: AuthShellProps) {
+  const t = await getT();
+
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_minmax(0,520px)]">
       <aside className="relative hidden overflow-hidden bg-ink text-white lg:block">
@@ -40,13 +43,12 @@ export function AuthShell({ eyebrow, title, children, footer }: AuthShellProps) 
             {siteConfig.name}
           </Link>
           <div className="max-w-sm">
-            <p className="up-xs text-white/70">Members</p>
+            <p className="up-xs text-white/70">{t("auth.members")}</p>
             <p className="mt-3 text-3xl font-bold leading-tight drop-shadow-[0_2px_18px_rgba(0,0,0,0.6)]">
-              Kept long, worn hard.
+              {t("auth.membersLine")}
             </p>
             <p className="mt-4 text-sm leading-relaxed text-white/70">
-              {siteConfig.tagline} Sign in to keep your bag, wishlist and orders in
-              one place.
+              {t("auth.keepTogether")}
             </p>
           </div>
         </div>
@@ -67,7 +69,7 @@ export function AuthShell({ eyebrow, title, children, footer }: AuthShellProps) 
         />
         <Link
           href="/"
-          className="up absolute bottom-5 left-6 text-base font-bold tracking-[0.32em] text-white"
+          className="up absolute bottom-5 start-6 text-base font-bold tracking-[0.32em] text-white"
         >
           {siteConfig.name}
         </Link>

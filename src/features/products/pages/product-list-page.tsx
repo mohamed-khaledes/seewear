@@ -1,6 +1,7 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/react-query";
+import { getT } from "@/lib/i18n/server";
 import { getQueryClient } from "@/lib/react-query/query-client";
 import { ProductResults } from "@/features/products/components/product-results";
 import {
@@ -22,6 +23,7 @@ export async function ProductListPage({
 }) {
   const filters = parseProductFilters(searchParams);
   const queryClient = getQueryClient();
+  const t = await getT();
 
   // The filter rail used to fetch its facets from the browser: three round
   // trips to Supabase before the sidebar could paint, ~450ms each. They are
@@ -40,12 +42,12 @@ export async function ProductListPage({
   ]);
 
   const heading = filters.q
-    ? `Results for “${filters.q}”`
+    ? t("listing.resultsFor", { query: filters.q })
     : filters.category
       ? filters.category.replace(/-/g, " ")
       : filters.onSale
-        ? "The sale"
-        : "All pieces";
+        ? t("listing.theSale")
+        : t("listing.allPieces");
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -60,7 +62,7 @@ export async function ProductListPage({
         <FilterToolbar filters={filters} total={firstPage.total} />
 
         <div className="lg:grid lg:grid-cols-[248px_1fr]">
-          <aside className="hidden border-r border-line bg-paper px-5 py-7 lg:block">
+          <aside className="hidden border-e border-line bg-paper px-5 py-7 lg:block">
             <FilterPanel filters={filters} />
           </aside>
 

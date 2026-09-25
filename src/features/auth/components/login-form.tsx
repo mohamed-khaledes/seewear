@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/features/auth/services/api/auth-actions";
 import { loginSchema, type LoginValues } from "@/features/auth/types";
+import { useT } from "@/lib/i18n";
 
 export function LoginForm({ next }: { next?: string }) {
   const [pending, startTransition] = useTransition();
@@ -27,6 +28,7 @@ export function LoginForm({ next }: { next?: string }) {
     defaultValues: { email: "", password: "" },
   });
 
+  const t = useT();
   function onSubmit(values: LoginValues) {
     startTransition(async () => {
       const result = await loginAction(values, next);
@@ -45,12 +47,12 @@ export function LoginForm({ next }: { next?: string }) {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Email</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("common.email")}</FormLabel>
               <FormControl>
                 <Input
                   type="email"
                   autoComplete="email"
-                  placeholder="you@email.com"
+                  placeholder={t("common.emailPlaceholder")}
                   className="h-11"
                   {...field}
                 />
@@ -66,12 +68,12 @@ export function LoginForm({ next }: { next?: string }) {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-baseline justify-between">
-                <FormLabel className="up-xs text-grey-2">Password</FormLabel>
+                <FormLabel className="up-xs text-grey-2">{t("auth.password")}</FormLabel>
                 <Link
                   href="/forgot-password"
                   className="text-[11px] text-grey-2 underline-offset-4 hover:text-ink hover:underline"
                 >
-                  Forgot it?
+                  {t("auth.forgotIt")}
                 </Link>
               </div>
               <FormControl>
@@ -94,7 +96,7 @@ export function LoginForm({ next }: { next?: string }) {
           disabled={pending}
           className="up-sm mt-2 h-12 w-full justify-center font-semibold"
         >
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ? t("auth.signingIn") : t("auth.signIn")}
         </Button>
       </form>
     </Form>

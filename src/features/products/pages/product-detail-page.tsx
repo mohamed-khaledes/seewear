@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 
+import { getT } from "@/lib/i18n/server";
+
 import { JsonLd } from "@/components/common/json-ld";
 import { siteConfig } from "@/config/site";
 
@@ -17,9 +19,10 @@ export async function ProductDetailPage({ slug }: { slug: string }) {
 
   if (!product || product.status !== "active") notFound();
 
-  const [related, reviews] = await Promise.all([
+  const [related, reviews, t] = await Promise.all([
     getRelatedProducts(product, 5),
     getReviewSummary(product.id),
+    getT(),
   ]);
 
   const url = `${siteConfig.url}/product/${product.slug}`;
@@ -70,7 +73,11 @@ export async function ProductDetailPage({ slug }: { slug: string }) {
 
       {related.length > 0 ? (
         <>
-          <SectionHeader title="Wears well with" href="/products" />
+          <SectionHeader
+            title={t("product.wearsWellWith")}
+            href="/products"
+            linkLabel={t("listing.seeEverything")}
+          />
           <ProductGrid products={related} />
         </>
       ) : null}

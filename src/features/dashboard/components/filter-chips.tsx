@@ -45,7 +45,7 @@ export function FilterChips({
           >
             {chip.label}
             {chip.count !== undefined ? (
-              <span className="ml-1.5 tabular-nums opacity-60">{chip.count}</span>
+              <span className="ms-1.5 tabular-nums opacity-60">{chip.count}</span>
             ) : null}
           </Link>
         );

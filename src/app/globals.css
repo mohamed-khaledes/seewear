@@ -160,6 +160,15 @@
       transform: translateX(-50%);
     }
   }
+
+  @keyframes marquee-rtl {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(50%);
+    }
+  }
 }
 
 @layer base {
@@ -169,6 +178,26 @@
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+  }
+  /* Arabic first when the page is Arabic, Latin after it for numerals, sizes
+     and the brand name, which stay in Latin either way. */
+  html[dir="rtl"] {
+    font-family: var(--font-arabic), var(--font-sans), system-ui, sans-serif;
+  }
+  /* The signature wide tracking is a Latin device; it pulls Arabic letters
+     apart and breaks the joins, so it is dropped for Arabic. */
+  html[dir="rtl"] :is(.up, .up-sm, .up-xs) {
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  /* The strip scrolls the way the language reads. */
+  html[dir="rtl"] .animate-marquee {
+    animation-name: marquee-rtl;
+  }
+  /* A toggle is a picture of a switch, not a sentence: the knob slides to the
+     same physical side in both languages. */
+  html[dir="rtl"] [data-slot="switch"] {
+    direction: ltr;
   }
   body {
     @apply bg-concrete text-foreground antialiased;

@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
+import { siteConfig } from "@/config/site";
 import {
   sendCancelledNotice,
   sendDeliveredNotice,
   sendFulfilmentNotice,
   sendRefundNotice,
 } from "@/lib/email";
+import { CourierError, getCourierDriver } from "@/lib/courier";
 import { isPaymobConfigured, PaymobError, refundTransaction } from "@/lib/paymob";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -17,14 +19,20 @@ import {
   canCancel,
   canMoveOrder,
   canRefund,
+  COURIERS,
   orderStatusMeta,
+  readShippingAddress,
   type OrderStatus,
 } from "@/features/orders";
 import { reconcileOrderNumber } from "@/features/checkout/server";
 import { assertCanManageStore } from "./guards.server";
 import {
+  BULK_ORDER_LIMIT,
+  BULK_ORDER_TARGETS,
   orderStatusFormSchema,
   type ActionResult,
+  type BulkOrderTarget,
+  type BulkOutcome,
   type OrderStatusFormValues,
 } from "@/features/dashboard/types";
 import type { TablesUpdate } from "@/types/database.types";
@@ -394,4 +402,316 @@ export async function updateOrderStatusAction(
 
   revalidateOrders(id);
   return { ok: true };
+}
+
+/* ------------------------------------------------------------------- bulk */
+
+type BulkRow = {
+  id: string;
+  order_number: string;
+  email: string;
+  status: OrderStatus;
+  payment_method: "card" | "cod";
+  total_cents: number;
+};
+
+/**
+ * Moves a selection of orders one step along — the Friday afternoon action,
+ * when twenty parcels go to the same courier at once.
+ *
+ * It refuses to be a shortcut past the rules the single-order form obeys. The
+ * same `ORDER_STATUS_FLOW` decides what may move, so nothing here can mark an
+ * order paid or refunded; orders in the selection that cannot make the move are
+ * left exactly as they were and counted back to the admin. Each update is
+ * matched on the status the row was read with, so two admins clicking on two
+ * screens move each order once between them.
+ *
+ * Tracking numbers are deliberately not part of this: a consignment number
+ * belongs to one parcel, and a number pasted across twenty orders would send
+ * twenty customers to someone else's parcel. The courier is shared, so it can
+ * be set here; the numbers are added per order afterwards.
+ */
+export async function bulkAdvanceOrdersAction(
+  ids: string[],
+  target: BulkOrderTarget,
+  courier?: string,
+): Promise<ActionResult<BulkOutcome>> {
+  const blocked = await assertCanManageStore();
+  if (blocked) return blocked;
+
+  if (!BULK_ORDER_TARGETS.includes(target)) {
+    return { ok: false, error: "That is not a move we make in bulk." };
+  }
+
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return { ok: false, error: "Nothing selected." };
+  if (unique.length > BULK_ORDER_LIMIT) {
+    return {
+      ok: false,
+      error: `Bulk actions cover up to ${BULK_ORDER_LIMIT} orders at a time.`,
+    };
+  }
+
+  const courierName = courier?.trim() || null;
+  if (courierName && !COURIERS.some((entry) => entry.name === courierName)) {
+    return { ok: false, error: "Pick a courier from the list." };
+  }
+
+  const supabase = await createClient();
+  const { data: rows, error: readError } = await supabase
+    .from("orders")
+    .select("id, order_number, email, status, payment_method, total_cents")
+    .in("id", unique)
+    .returns<BulkRow[]>();
+
+  if (readError) return { ok: false, error: "We could not read those orders." };
+
+  const movable = (rows ?? []).filter((row) => canMoveOrder(row.status, target));
+  if (movable.length === 0) {
+    return {
+      ok: false,
+      error:
+        target === "fulfilled"
+          ? "None of those orders are waiting to be shipped."
+          : "None of those orders are out for delivery.",
+    };
+  }
+
+  const now = new Date().toISOString();
+
+  // One statement per status the selection came from, each matched on that
+  // status so a row someone else has already moved is left alone.
+  const byStatus = new Map<OrderStatus, string[]>();
+  for (const row of movable) {
+    byStatus.set(row.status, [...(byStatus.get(row.status) ?? []), row.id]);
+  }
+
+  const written = new Set<string>();
+
+  for (const [from, groupIds] of byStatus) {
+    const patch: TablesUpdate<"orders"> = { status: target, status_note: null };
+    if (courierName) patch.courier = courierName;
+    if (target === "fulfilled") patch.fulfilled_at = now;
+    if (target === "delivered") patch.delivered_at = now;
+
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update(patch)
+      .in("id", groupIds)
+      .eq("status", from)
+      .select("id");
+
+    if (error) {
+      console.error("[dashboard] bulk order update failed", error);
+      continue;
+    }
+    for (const row of updated ?? []) written.add(row.id);
+  }
+
+  const moved = movable.filter((row) => written.has(row.id));
+
+  // Cash arrives at the door, so a delivered cash order is also a payment. The
+  // ledger on the Payments page has to agree with the parcel.
+  const cashCollected = moved.filter((row) => row.payment_method === "cod");
+  if (target === "delivered" && cashCollected.length > 0 && isServiceRoleConfigured()) {
+    await createAdminClient()
+      .from("payments")
+      .insert(
+        cashCollected.map((row) => ({
+          order_id: row.id,
+          provider: "cash",
+          transaction_id: `cash-${row.order_number}`,
+          amount_cents: row.total_cents,
+          status: "success",
+          hmac_verified: false,
+          method: "Cash on delivery",
+          raw: { collected_by: courierName ?? "courier", bulk: true },
+        })),
+      );
+  }
+
+  // One slow mailbox must not hold up the rest, and an email that bounces must
+  // not undo a parcel that really did ship.
+  await Promise.allSettled(
+    moved.map((row) =>
+      target === "fulfilled"
+        ? sendFulfilmentNotice({
+            email: row.email,
+            orderNumber: row.order_number,
+            totalCents: row.total_cents,
+            courier: courierName,
+          })
+        : sendDeliveredNotice({ email: row.email, orderNumber: row.order_number }),
+    ),
+  );
+
+  for (const row of moved) revalidatePath(`/dashboard/orders/${row.id}`);
+  revalidateOrders();
+
+  return {
+    ok: true,
+    data: { moved: moved.length, skipped: unique.length - moved.length },
+  };
+}
+
+/* --------------------------------------------------------------- couriers */
+
+/**
+ * Books the parcel with the courier and marks the order shipped in one go.
+ *
+ * This is the manual "mark shipped" flow with the typing taken out: the courier
+ * hands back the consignment number instead of the admin reading it off a label,
+ * and everything after that — the status move, the timeline entry, the customer's
+ * email with the tracking link — is the same code path as before. That is the
+ * point. A courier integration that quietly invented its own way of shipping an
+ * order would be two systems to keep in step.
+ *
+ * The order is only moved after the courier has confirmed. If Bosta refuses,
+ * nothing about the order changes and the admin reads the refusal.
+ */
+export async function bookShipmentAction(id: string): Promise<ActionResult<string>> {
+  const blocked = await assertCanManageStore();
+  if (blocked) return blocked;
+
+  const driver = getCourierDriver();
+  if (!driver) {
+    return { ok: false, error: "No courier account is connected on this deployment." };
+  }
+
+  const supabase = await createClient();
+  const { data: order } = await supabase
+    .from("orders")
+    .select(
+      `id, order_number, email, status, payment_method, total_cents, refunded_cents,
+       shipping_address, shipment_id, items:order_items(quantity)`,
+    )
+    .eq("id", id)
+    .maybeSingle<{
+      id: string;
+      order_number: string;
+      email: string;
+      status: OrderStatus;
+      payment_method: "card" | "cod";
+      total_cents: number;
+      refunded_cents: number;
+      shipping_address: unknown;
+      shipment_id: string | null;
+      items: { quantity: number }[];
+    }>();
+
+  if (!order) return { ok: false, error: "That order no longer exists." };
+  if (order.shipment_id) {
+    return { ok: false, error: "This order is already booked with the courier." };
+  }
+  if (!canMoveOrder(order.status, "fulfilled")) {
+    return {
+      ok: false,
+      error: `An order marked “${orderStatusMeta[order.status].label}” is not ready to ship.`,
+    };
+  }
+
+  const address = readShippingAddress(order.shipping_address);
+  const itemsCount = order.items.reduce((count, item) => count + item.quantity, 0);
+
+  let shipment;
+  try {
+    shipment = await driver.createShipment({
+      orderNumber: order.order_number,
+      address,
+      itemsCount,
+      // Cash orders only. A card order is paid; asking the courier to collect
+      // again would charge the customer twice.
+      collectCents:
+        order.payment_method === "cod"
+          ? Math.max(order.total_cents - order.refunded_cents, 0)
+          : 0,
+      notes: `${siteConfig.name} ${order.order_number}`,
+    });
+  } catch (error) {
+    if (error instanceof CourierError) return { ok: false, error: error.message };
+    console.error("[dashboard] courier booking failed", error);
+    return { ok: false, error: "We could not reach the courier. Try again in a moment." };
+  }
+
+  const { data: written, error } = await supabase
+    .from("orders")
+    .update({
+      status: "fulfilled",
+      fulfilled_at: new Date().toISOString(),
+      courier: driver.label,
+      tracking_number: shipment.trackingNumber,
+      tracking_url: shipment.trackingUrl,
+      shipment_provider: shipment.provider,
+      shipment_id: shipment.shipmentId,
+      status_note: null,
+    })
+    .eq("id", id)
+    .eq("status", order.status)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !written) {
+    // The parcel is genuinely booked, so the number must not be lost with the
+    // failed write. It is the one thing the admin needs to fix this by hand.
+    console.error("[dashboard] shipment booked but order not updated", {
+      order: order.order_number,
+      tracking: shipment.trackingNumber,
+      error,
+    });
+    return {
+      ok: false,
+      error: `The courier booked ${shipment.trackingNumber}, but the order did not update. Add it by hand.`,
+    };
+  }
+
+  await sendFulfilmentNotice({
+    email: order.email,
+    orderNumber: order.order_number,
+    totalCents: order.total_cents,
+    courier: driver.label,
+    trackingNumber: shipment.trackingNumber,
+    trackingUrl: shipment.trackingUrl,
+  });
+
+  revalidateOrders(id);
+  return { ok: true, data: shipment.trackingNumber };
+}
+
+/**
+ * The courier's own airway bill for a booked parcel — the label that goes on
+ * the box. Returns the link rather than the PDF: it is the courier's document,
+ * served from the courier, and proxying it would only add a way to fail.
+ */
+export async function shipmentLabelAction(id: string): Promise<ActionResult<string>> {
+  const blocked = await assertCanManageStore();
+  if (blocked) return blocked;
+
+  const driver = getCourierDriver();
+  if (!driver?.labelUrl) {
+    return { ok: false, error: "This courier does not print labels from here." };
+  }
+
+  const supabase = await createClient();
+  const { data: order } = await supabase
+    .from("orders")
+    .select("shipment_id, shipment_provider")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!order?.shipment_id) {
+    return { ok: false, error: "This order has not been booked with the courier." };
+  }
+  if (order.shipment_provider && order.shipment_provider !== driver.provider) {
+    return { ok: false, error: "This order was booked with a different courier." };
+  }
+
+  try {
+    const url = await driver.labelUrl(order.shipment_id);
+    if (!url) return { ok: false, error: "The courier did not return a label." };
+    return { ok: true, data: url };
+  } catch (error) {
+    if (error instanceof CourierError) return { ok: false, error: error.message };
+    console.error("[dashboard] label fetch failed", error);
+    return { ok: false, error: "We could not reach the courier." };
+  }
 }

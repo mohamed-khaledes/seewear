@@ -6,6 +6,7 @@ import { Box, Camera } from "lucide-react";
 import { ProductShot } from "@/components/common/product-shot";
 import { cn } from "@/lib/utils";
 import { useViewer3DStore } from "@/stores/viewer-3d-store";
+import { useT } from "@/lib/i18n";
 
 const ModelViewer = dynamic(
   () => import("@/components/common/model-viewer").then((m) => m.ModelViewer),
@@ -50,6 +51,7 @@ export function ProductStage({
   productHasAnyModel,
   productName,
 }: ProductStageProps) {
+  const t = useT();
   const enabled = useViewer3DStore((state) => state.enabled);
   const hydrated = useViewer3DStore((state) => state.hydrated);
   const setEnabled = useViewer3DStore((state) => state.setEnabled);
@@ -80,12 +82,12 @@ export function ProductStage({
         )}
 
         {modelUrl ? (
-          <div className="absolute bottom-4 left-4 flex border border-line bg-paper/95">
+          <div className="absolute bottom-4 start-4 flex border border-line bg-paper/95">
             <StageTab
               active={!showing3D}
               onClick={() => setEnabled(false)}
               icon={<Camera className="size-3.5" strokeWidth={1.8} />}
-              label="Photo"
+              label={t("product.photo")}
             />
             <StageTab
               active={showing3D}
@@ -97,15 +99,15 @@ export function ProductStage({
         ) : null}
 
         {showing3D ? (
-          <p className="up-xs pointer-events-none absolute bottom-6 right-4 text-grey-2">
-            Drag to spin
+          <p className="up-xs pointer-events-none absolute bottom-6 end-4 text-grey-2">
+            {t("product.dragToSpin")}
           </p>
         ) : null}
 
         {/* Only when this colour has no mesh but another one does — otherwise
             the shopper is left wondering why the switch vanished. */}
         {!modelUrl && productHasAnyModel ? (
-          <p className="up-xs absolute bottom-4 left-4 bg-paper/95 px-2 py-1.5 text-grey-2">
+          <p className="up-xs absolute bottom-4 start-4 bg-paper/95 px-2 py-1.5 text-grey-2">
             3D not scanned for this colour yet
           </p>
         ) : null}

@@ -75,8 +75,8 @@ export function DashboardSidebar({ user }: { user: SessionUser }) {
                   href={link.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded px-3 py-2 text-[13px] text-[#c9c9c9] transition-colors hover:bg-[#141414] hover:text-white lg:rounded-none lg:border-l-2 lg:border-transparent lg:px-6 lg:py-2.5",
-                    active && "bg-[#141414] text-white lg:border-l-white",
+                    "flex items-center gap-3 rounded px-3 py-2 text-[13px] text-[#c9c9c9] transition-colors hover:bg-[#141414] hover:text-white lg:rounded-none lg:border-s-2 lg:border-transparent lg:px-6 lg:py-2.5",
+                    active && "bg-[#141414] text-white lg:border-s-white",
                   )}
                 >
                   <span className="[&_svg]:size-4 [&_svg]:stroke-[1.6]">
@@ -106,7 +106,7 @@ export function DashboardSidebar({ user }: { user: SessionUser }) {
 
       <Link
         href="/"
-        className="up-xs ml-auto flex items-center gap-2 rounded px-3 py-2 text-[#c9c9c9] transition-colors hover:text-white lg:ml-0 lg:hidden"
+        className="up-xs ms-auto flex items-center gap-2 rounded px-3 py-2 text-[#c9c9c9] transition-colors hover:text-white lg:ms-0 lg:hidden"
       >
         <Store className="size-4" />
         Storefront

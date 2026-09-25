@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn, discountPercent } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { useAddToBag } from "@/features/cart";
 import { WishlistButton } from "@/features/wishlist";
 import type { ProductListItem } from "@/features/products/types";
@@ -30,6 +31,7 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product, priority = false }: ProductCardProps) {
+  const t = useT();
   const colors = colorOptions(product);
   // The caption names colors[0] and quick-add bags colors[0], so show that
   // colour's shot. Taking images[0] instead put a white tee under "Navy".
@@ -62,8 +64,8 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         {/* The shots are full-bleed photographs, so every badge needs its own
             ground — bare text lands on the garment and stops being readable. */}
         {product.on_sale ? (
-          <span className="up-xs pointer-events-none absolute right-2.5 top-2.5 bg-paper/90 px-1.5 py-1 text-grey-2">
-            Sale
+          <span className="up-xs pointer-events-none absolute end-2.5 top-2.5 bg-paper/90 px-1.5 py-1 text-grey-2">
+            {t("product.sale")}
           </span>
         ) : null}
 
@@ -72,7 +74,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         {peek.active ? (
           <span
             className={cn(
-              "up-xs pointer-events-none absolute right-2.5 flex items-center gap-1 bg-ink/90 px-1.5 py-1 text-white",
+              "up-xs pointer-events-none absolute end-2.5 flex items-center gap-1 bg-ink/90 px-1.5 py-1 text-white",
               product.on_sale ? "top-10" : "top-2.5",
             )}
           >
@@ -84,16 +86,16 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         <WishlistButton
           productId={product.id}
           productName={product.name}
-          className="absolute left-3 top-3 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+          className="absolute start-3 top-3 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
         />
 
         {/* One row: a discounted item can also be sold out, and these two used
             to be absolutely positioned on the same corner. */}
         {soldOut || off ? (
-          <div className="pointer-events-none absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
+          <div className="pointer-events-none absolute bottom-2.5 start-2.5 flex items-center gap-1.5">
             {soldOut ? (
               <span className="up-xs bg-paper/90 px-1.5 py-1 font-semibold text-grey-2">
-                Sold out
+                {t("product.soldOut")}
               </span>
             ) : null}
             {off ? (
@@ -132,6 +134,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 
 /** The "+" on the shot: pick a size, and it lands in the bag. */
 function QuickAdd({ product }: { product: ProductListItem }) {
+  const t = useT();
   const addToBag = useAddToBag();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState(false);
@@ -159,9 +162,9 @@ function QuickAdd({ product }: { product: ProductListItem }) {
       <button
         type="button"
         onClick={() => add(inStock[0])}
-        aria-label={`Add ${product.name} to bag`}
+        aria-label={`${t("product.addToBag")} — ${product.name}`}
         className={cn(
-          "absolute bottom-2.5 right-3 grid size-7 place-items-center rounded-full border border-line bg-white text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white",
+          "absolute bottom-2.5 end-3 grid size-7 place-items-center rounded-full border border-line bg-white text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white",
         )}
       >
         {added ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -172,14 +175,14 @@ function QuickAdd({ product }: { product: ProductListItem }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        aria-label={`Choose a size for ${product.name}`}
-        className="absolute bottom-2.5 right-3 grid size-7 place-items-center rounded-full border border-line bg-white text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white"
+        aria-label={`${t("product.pickSize")} — ${product.name}`}
+        className="absolute bottom-2.5 end-3 grid size-7 place-items-center rounded-full border border-line bg-white text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white"
       >
         {added ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-auto p-2">
-        <p className="up-xs px-1 pb-2 text-grey-2">Pick a size</p>
+        <p className="up-xs px-1 pb-2 text-grey-2">{t("product.pickSize")}</p>
         <div className="flex flex-wrap gap-1">
           {variants.map((variant) => (
             <button
@@ -189,7 +192,7 @@ function QuickAdd({ product }: { product: ProductListItem }) {
               onClick={() => add(variant)}
               className="up-xs min-w-10 rounded border border-line px-2 py-2 font-semibold transition-colors hover:border-ink disabled:cursor-not-allowed disabled:text-grey disabled:line-through"
             >
-              {variant.size ?? "One size"}
+              {variant.size ?? t("common.oneSize")}
             </button>
           ))}
         </div>

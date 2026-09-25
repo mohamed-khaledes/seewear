@@ -19,8 +19,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { signupAction } from "@/features/auth/services/api/auth-actions";
 import { signupSchema, type SignupValues } from "@/features/auth/types";
+import { useT } from "@/lib/i18n";
 
 export function SignupForm({ next }: { next?: string }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -46,14 +48,14 @@ export function SignupForm({ next }: { next?: string }) {
     return (
       <div className="border border-line bg-concrete p-6 text-center">
         <MailCheck className="mx-auto size-8 text-ok" strokeWidth={1.4} />
-        <p className="up-xs mt-4 text-grey-2">One more step</p>
-        <h2 className="mt-2 text-lg font-bold tracking-tight">Check your inbox</h2>
+        <p className="up-xs mt-4 text-grey-2">{t("auth.oneMoreStep")}</p>
+        <h2 className="mt-2 text-lg font-bold tracking-tight">{t("auth.checkInbox")}</h2>
         <p className="mx-auto mt-2 max-w-[36ch] text-sm leading-relaxed text-grey-2">
-          We sent a link to <span className="font-semibold text-ink">{sentTo}</span>. Open
-          it to confirm the address and you are signed in.
+          {t("auth.sentLinkTo")} <span className="font-semibold text-ink">{sentTo}</span>.{" "}
+          {t("auth.openTheLink")}
         </p>
         <p className="mt-4 text-xs text-grey">
-          Nothing after a few minutes? Check spam, or{" "}
+          {t("auth.nothingAfter")}{" "}
           <button
             type="button"
             onClick={() => setSentTo(null)}
@@ -75,11 +77,11 @@ export function SignupForm({ next }: { next?: string }) {
           name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Name</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("auth.name")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="name"
-                  placeholder="Mohamed Khaled"
+                  placeholder={t("auth.namePlaceholder")}
                   className="h-11"
                   {...field}
                 />
@@ -94,12 +96,12 @@ export function SignupForm({ next }: { next?: string }) {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Email</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("common.email")}</FormLabel>
               <FormControl>
                 <Input
                   type="email"
                   autoComplete="email"
-                  placeholder="you@email.com"
+                  placeholder={t("common.emailPlaceholder")}
                   className="h-11"
                   {...field}
                 />
@@ -114,18 +116,18 @@ export function SignupForm({ next }: { next?: string }) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Password</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("auth.password")}</FormLabel>
               <FormControl>
                 <Input
                   type="password"
                   autoComplete="new-password"
-                  placeholder="At least 8 characters"
+                  placeholder={t("auth.passwordPlaceholder")}
                   className="h-11"
                   {...field}
                 />
               </FormControl>
               <FormDescription className="text-xs">
-                Eight characters or more. You can change it later from your account.
+                {t("auth.passwordHint")}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -138,7 +140,7 @@ export function SignupForm({ next }: { next?: string }) {
           disabled={pending}
           className="up-sm mt-2 h-12 w-full justify-center font-semibold"
         >
-          {pending ? "Creating account…" : "Create account"}
+          {pending ? t("auth.creating") : t("auth.createAccount")}
         </Button>
       </form>
     </Form>

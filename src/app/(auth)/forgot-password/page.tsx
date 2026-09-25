@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
 
-import { ForgotPasswordPage } from "@/features/auth";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Reset your password", robots: { index: false } };
+import { ForgotPasswordPage } from "@/features/auth/server";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return {
+    title: t("meta.forgotTitle"),
+    description: t("meta.forgotDescription"),
+    robots: { index: false },
+  };
+}
 
 export default function Page() {
   return <ForgotPasswordPage />;

@@ -153,7 +153,7 @@ function DiscountRow({ code }: { code: DiscountWithUsage }) {
         {code.uses}
         {code.usage_limit !== null ? ` / ${code.usage_limit}` : ""}
         {code.once_per_customer ? (
-          <span className="ml-1.5 text-grey">· once each</span>
+          <span className="ms-1.5 text-grey">· once each</span>
         ) : null}
       </TableCell>
       <TableCell className="hidden lg:table-cell text-xs text-grey-2">

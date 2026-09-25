@@ -17,9 +17,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { requestPasswordResetAction } from "@/features/auth/services/api/auth-actions";
 import { forgotPasswordSchema, type ForgotPasswordValues } from "@/features/auth/types";
+import { useT } from "@/lib/i18n";
 
 export function ForgotPasswordForm() {
   const [pending, startTransition] = useTransition();
+  const t = useT();
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   const form = useForm<ForgotPasswordValues>({
@@ -42,7 +44,7 @@ export function ForgotPasswordForm() {
     return (
       <div className="border border-line bg-concrete p-6 text-center">
         <MailCheck className="mx-auto size-8 text-ok" strokeWidth={1.4} />
-        <h2 className="mt-4 text-lg font-bold tracking-tight">Check your inbox</h2>
+        <h2 className="mt-4 text-lg font-bold tracking-tight">{t("auth.checkInbox")}</h2>
         {/* Worded the same whether or not the address has an account. */}
         <p className="mx-auto mt-2 max-w-[36ch] text-sm leading-relaxed text-grey-2">
           If <span className="font-semibold text-ink">{sentTo}</span> has an account, a
@@ -60,12 +62,12 @@ export function ForgotPasswordForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Email</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("common.email")}</FormLabel>
               <FormControl>
                 <Input
                   type="email"
                   autoComplete="email"
-                  placeholder="you@email.com"
+                  placeholder={t("common.emailPlaceholder")}
                   className="h-11"
                   {...field}
                 />
@@ -80,7 +82,7 @@ export function ForgotPasswordForm() {
           disabled={pending}
           className="up-sm mt-2 h-12 w-full justify-center font-semibold"
         >
-          {pending ? "Sending…" : "Send reset link"}
+          {pending ? t("auth.sending") : t("auth.sendResetLink")}
         </Button>
       </form>
     </Form>

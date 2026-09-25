@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AuthShell } from "@/features/auth/components/auth-shell";
 import { ResetPasswordForm } from "@/features/auth/components/reset-password-form";
 import { getSessionUser } from "@/features/auth/services/api/session.server";
+import { getT } from "@/lib/i18n/server";
 
 /**
  * Reached from the reset email through the auth callback, which has already
@@ -10,17 +11,17 @@ import { getSessionUser } from "@/features/auth/services/api/session.server";
  * already used, or opened in a different browser.
  */
 export async function ResetPasswordPage() {
-  const user = await getSessionUser();
+  const [user, t] = await Promise.all([getSessionUser(), getT()]);
 
   return (
     <AuthShell
-      eyebrow="Account"
-      title="Choose a new password"
+      eyebrow={t("account.account")}
+      title={t("auth.newPasswordTitle")}
       footer={
         <>
-          Need help?{" "}
+          {t("auth.needHelp")}{" "}
           <Link href="/help/contact" className="font-medium text-ink underline underline-offset-4">
-            Contact us
+            {t("auth.contactUs")}
           </Link>
         </>
       }
@@ -29,15 +30,12 @@ export async function ResetPasswordPage() {
         <ResetPasswordForm />
       ) : (
         <div className="grid gap-4 text-sm leading-relaxed text-grey-2">
-          <p>
-            This link has expired or was already used. Reset links work once, for an hour,
-            in the browser that opened them.
-          </p>
+          <p>{t("auth.linkExpired")}</p>
           <Link
             href="/forgot-password"
             className="up-sm w-fit border-b border-ink pb-0.5 font-semibold text-ink"
           >
-            Send a new link
+            {t("auth.sendNewLink")}
           </Link>
         </div>
       )}

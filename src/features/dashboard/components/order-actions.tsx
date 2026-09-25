@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Loader2, PackagePlus, RefreshCw, RotateCcw, XCircle } from "lucide-react";
+import { Loader2, PackagePlus, Printer, RefreshCw, RotateCcw, Truck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -22,16 +22,19 @@ import { Label } from "@/components/ui/label";
 import { formatMoney, toPiastres } from "@/lib/utils";
 import {
   canCancel,
+  canMoveOrder,
   canRefund,
   type OrderStatus,
   type PaymentMethod,
 } from "@/features/orders";
 import { useDemoGuard } from "@/features/dashboard/hooks/use-demo-guard";
 import {
+  bookShipmentAction,
   cancelOrderAction,
   checkPaymentAction,
   refundOrderAction,
   restockOrderAction,
+  shipmentLabelAction,
 } from "@/features/dashboard/services/api/order-actions";
 import type { ActionResult } from "@/features/dashboard/types";
 
@@ -42,6 +45,8 @@ export function OrderActions({
   totalCents,
   refundedCents,
   stockHeld,
+  courierLabel,
+  shipmentId,
 }: {
   orderId: string;
   status: OrderStatus;
@@ -49,6 +54,10 @@ export function OrderActions({
   totalCents: number;
   refundedCents: number;
   stockHeld: boolean;
+  /** The courier this deployment books with, or null when none is connected. */
+  courierLabel: string | null;
+  /** The courier's own reference, once this parcel has been booked. */
+  shipmentId: string | null;
 }) {
   const router = useRouter();
   const { guard } = useDemoGuard();
@@ -73,10 +82,80 @@ export function OrderActions({
 
   const refused = status === "fulfilled" && paymentMethod === "cod";
   const button = "h-10 text-xs font-semibold";
+  const collect = paymentMethod === "cod" ? remaining : 0;
+
+  /**
+   * The label opens from a toast rather than straight from the action: the URL
+   * only exists after the round trip to the courier, and a window opened
+   * without a click behind it is what browsers block.
+   */
+  function printLabel() {
+    startTransition(async () => {
+      const result = await shipmentLabelAction(orderId);
+      if (!result.ok || !result.data) {
+        toast.error(result.ok ? "The courier did not return a label." : result.error);
+        return;
+      }
+      const url = result.data;
+      toast.success("Airway bill ready", {
+        action: { label: "Open", onClick: () => window.open(url, "_blank", "noopener") },
+        duration: 12_000,
+      });
+    });
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {pending ? <Loader2 className="size-4 animate-spin text-grey" /> : null}
+
+      {courierLabel && !shipmentId && canMoveOrder(status, "fulfilled") ? (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="lg" className={button} disabled={pending}>
+              <Truck />
+              Book with {courierLabel}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hand this parcel to {courierLabel}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {collect > 0
+                  ? `The courier will be told to collect ${formatMoney(collect)} at the door.`
+                  : "This order is already paid, so the courier collects nothing."}{" "}
+                The order is marked shipped and the customer gets the tracking
+                number by email.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Not yet</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() =>
+                  run(
+                    () => bookShipmentAction(orderId),
+                    (tracking) => `Booked with ${courierLabel} · ${tracking ?? ""}`,
+                  )
+                }
+              >
+                Book it
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+
+      {courierLabel && shipmentId ? (
+        <Button
+          variant="outline"
+          size="lg"
+          className={button}
+          disabled={pending}
+          onClick={printLabel}
+        >
+          <Printer />
+          Airway bill
+        </Button>
+      ) : null}
 
       {status === "pending" && paymentMethod === "card" ? (
         <Button

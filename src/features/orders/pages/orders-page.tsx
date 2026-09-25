@@ -5,28 +5,29 @@ import { ProductShot } from "@/components/common/product-shot";
 import { StatusPill } from "@/components/common/status-pill";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
 import { getMyOrders } from "@/features/orders/services/api/orders.server";
-import { orderStatusMeta } from "@/features/orders/services/utils/status";
+import { orderStatusMeta, statusLabel } from "@/features/orders/services/utils/status";
 
 export async function OrdersPage() {
-  const orders = await getMyOrders();
+  const [orders, t] = await Promise.all([getMyOrders(), getT()]);
 
   return (
     <div className="bg-concrete">
       <div className="border-b border-line bg-paper px-5 pb-6 pt-9 lg:px-6">
-        <p className="up-xs text-grey-2">Account</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">Orders</h1>
+        <p className="up-xs text-grey-2">{t("account.account")}</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight lg:text-3xl">
+          {t("orders.title")}
+        </h1>
       </div>
 
       {orders.length === 0 ? (
         <div className="bg-paper px-6 py-24 text-center">
           <Package className="mx-auto size-8 text-grey" strokeWidth={1.3} />
-          <h2 className="mt-4 text-base font-semibold">No orders yet</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-grey-2">
-            They will show up here once you check out.
-          </p>
+          <h2 className="mt-4 text-base font-semibold">{t("orders.emptyTitle")}</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-grey-2">{t("orders.emptyBody")}</p>
           <Button asChild size="lg" className="up-sm mt-6 h-12 px-8 font-semibold">
-            <Link href="/products">Start shopping</Link>
+            <Link href="/products">{t("common.startShopping")}</Link>
           </Button>
         </div>
       ) : (
@@ -51,12 +52,14 @@ export async function OrdersPage() {
                           {order.order_number}
                         </p>
                         <p className="up-xs mt-1 text-grey-2">
-                          {formatDate(order.created_at)} · {itemCount}{" "}
-                          {itemCount === 1 ? "item" : "items"}
+                          {formatDate(order.created_at)} ·{" "}
+                          {t("orders.pieceCount", { count: itemCount })}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
+                        <StatusPill tone={meta.tone}>
+                          {statusLabel(t, order.status)}
+                        </StatusPill>
                         <span className="text-sm font-bold tabular-nums">
                           {formatMoney(order.total_cents)}
                         </span>

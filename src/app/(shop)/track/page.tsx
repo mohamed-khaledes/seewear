@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
+import { getT } from "@/lib/i18n/server";
+
 import { TrackOrderPage } from "@/features/orders/server";
 
-export const metadata: Metadata = {
-  title: "Track your order",
-  description:
-    "Follow a SEEWEAR order with your order number and email. No account needed.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("meta.trackTitle"), description: t("meta.trackDescription") };
+}
 
 export default async function Page({
   searchParams,

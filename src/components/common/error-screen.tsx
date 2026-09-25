@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 /**
  * The shared face of every error boundary. Reports once per error to
@@ -15,7 +16,7 @@ export function ErrorScreen({
   reset,
   scope,
   homeHref = "/",
-  homeLabel = "Back to the shop",
+  homeLabel,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
@@ -23,6 +24,8 @@ export function ErrorScreen({
   homeHref?: string;
   homeLabel?: string;
 }) {
+  const t = useT();
+
   useEffect(() => {
     void fetch("/api/errors", {
       method: "POST",
@@ -39,21 +42,20 @@ export function ErrorScreen({
   return (
     <div className="grid min-h-[60dvh] place-items-center bg-concrete px-6 py-24 text-center">
       <div>
-        <p className="up-xs text-grey-2">Something broke</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">That did not load</h1>
+        <p className="up-xs text-grey-2">{t("errors.somethingBroke")}</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">{t("errors.didNotLoad")}</h1>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-grey-2">
-          This part of the page hit an error. Try again. If it keeps happening we
-          already know — it was reported the moment it broke.
+          {t("errors.reported")}
         </p>
         {error.digest ? (
           <p className="mt-3 font-mono text-[11px] text-grey">ref {error.digest}</p>
         ) : null}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Button onClick={reset} size="lg" className="up-sm h-12 px-8 font-semibold">
-            Try again
+            {t("common.tryAgain")}
           </Button>
           <Button asChild variant="outline" size="lg" className="up-sm h-12 px-8 font-semibold">
-            <Link href={homeHref}>{homeLabel}</Link>
+            <Link href={homeHref}>{homeLabel ?? t("errors.home")}</Link>
           </Button>
         </div>
       </div>

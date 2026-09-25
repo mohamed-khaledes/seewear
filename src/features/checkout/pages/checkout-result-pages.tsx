@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { StatusPill } from "@/components/common/status-pill";
@@ -46,42 +47,37 @@ export async function CheckoutSuccessPage({
    */
   method?: string;
 }) {
-  const order = await loadVisibleOrder(orderNumber);
+  const [order, t] = await Promise.all([loadVisibleOrder(orderNumber), getT()]);
   const cash = method === "cod" || order?.status === "confirmed";
 
   return (
     <div className="bg-concrete px-5 py-20 lg:py-28">
       <div className="mx-auto max-w-lg bg-paper p-8 text-center lg:p-12">
         <CheckCircle2 className="mx-auto size-10 text-ok" strokeWidth={1.4} />
-        <p className="up-xs mt-5 text-grey-2">Confirmation</p>
+        <p className="up-xs mt-5 text-grey-2">{t("checkout.stepConfirmation")}</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">
-          {cash ? "Order confirmed" : "Order received"}
+          {cash ? t("orderResult.codTitle") : t("orderResult.confirmedTitle")}
         </h1>
 
         {orderNumber ? (
           <p className="mt-3 text-sm text-grey-2">
-            Order{" "}
-            <span className="font-semibold tabular-nums text-ink">{orderNumber}</span> is
-            in. {cash
-              ? "Have the cash ready for the courier — the confirmation email has the total."
-              : "A receipt is on its way to your inbox."}
+            {t("orderResult.orderIsIn", { number: orderNumber })}{" "}
+            {cash ? t("orderResult.codBody") : t("orderResult.confirmedBody")}
           </p>
         ) : (
-          <p className="mt-3 text-sm text-grey-2">
-            Your order is in. A receipt is on its way to your inbox.
-          </p>
+          <p className="mt-3 text-sm text-grey-2">{t("orderResult.confirmedBody")}</p>
         )}
 
         {order ? (
-          <div className="mt-8 border-t border-line pt-6 text-left">
+          <div className="mt-8 border-t border-line pt-6 text-start">
             <div className="mb-4 flex items-center justify-between">
-              <span className="up-xs text-grey-2">Status</span>
+              <span className="up-xs text-grey-2">{t("orderResult.status")}</span>
               <StatusPill tone={order.status === "pending" ? "warn" : "ok"}>
                 {order.status === "pending"
-                  ? "Confirming payment"
+                  ? t("orderResult.confirming")
                   : order.status === "confirmed"
-                    ? "Confirmed · pay on delivery"
-                    : "Paid"}
+                    ? t("orderResult.codStatus")
+                    : t("orderResult.paid")}
               </StatusPill>
             </div>
 
@@ -99,7 +95,7 @@ export async function CheckoutSuccessPage({
             </ul>
 
             <div className="mt-5 flex items-baseline justify-between border-t border-line pt-4">
-              <span className="text-sm font-bold">Total</span>
+              <span className="text-sm font-bold">{t("orderResult.total")}</span>
               <span className="text-base font-bold tabular-nums">
                 {formatMoney(order.total_cents)}
               </span>
@@ -110,55 +106,56 @@ export async function CheckoutSuccessPage({
         <div className="mt-8 grid gap-2">
           <Button asChild size="lg" className="up-sm h-12 font-semibold">
             <Link href={orderNumber ? `/track?order=${orderNumber}` : "/track"}>
-              Track your order
+              {t("orderResult.trackOrder")}
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="up-sm h-11 font-semibold">
-            <Link href="/products">Keep shopping</Link>
+            <Link href="/products">{t("common.keepShopping")}</Link>
           </Button>
         </div>
 
         <p className="mt-6 text-xs leading-relaxed text-grey">
-          Payment is only marked complete once Paymob confirms it to us directly. If the
-          status still reads &ldquo;confirming&rdquo;, give it a minute.
+          {t("orderResult.onlyWhenConfirmed")}
         </p>
       </div>
     </div>
   );
 }
 
-export function CheckoutFailedPage({
+export async function CheckoutFailedPage({
   orderNumber,
   reason,
 }: {
   orderNumber?: string;
   reason?: string;
 }) {
+  const t = await getT();
+
   return (
     <div className="bg-concrete px-5 py-20 lg:py-28">
       <div className="mx-auto max-w-lg bg-paper p-8 text-center lg:p-12">
         <XCircle className="mx-auto size-10 text-sale" strokeWidth={1.4} />
-        <p className="up-xs mt-5 text-grey-2">Payment</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">That did not go through</h1>
+        <p className="up-xs mt-5 text-grey-2">{t("checkout.payment")}</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">
+          {t("orderResult.failedTitle")}
+        </h1>
 
         <p className="mt-3 text-sm leading-relaxed text-grey-2">
-          {reason
-            ? reason
-            : "The bank turned the payment down. Nothing has been charged, and your bag is untouched."}
+          {reason ? reason : t("orderResult.failedBody")}
         </p>
 
         {orderNumber ? (
           <p className="mt-2 text-xs text-grey">
-            Reference <span className="tabular-nums">{orderNumber}</span>
+            {t("orderResult.reference")} <span className="tabular-nums">{orderNumber}</span>
           </p>
         ) : null}
 
         <div className="mt-8 grid gap-2">
           <Button asChild size="lg" className="up-sm h-12 font-semibold">
-            <Link href="/checkout">Try again</Link>
+            <Link href="/checkout">{t("common.tryAgain")}</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="up-sm h-11 font-semibold">
-            <Link href="/cart">Back to bag</Link>
+            <Link href="/cart">{t("orderResult.backToBag")}</Link>
           </Button>
         </div>
       </div>

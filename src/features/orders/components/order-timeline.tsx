@@ -1,8 +1,10 @@
 import { Check, Truck } from "lucide-react";
 
 import { cn, formatDateTime } from "@/lib/utils";
+import type { Translator } from "@/lib/i18n";
 import {
-  orderStatusMeta,
+  statusBlurb,
+  statusLabel,
   timelineFor,
   timelineIndex,
   type OrderStatus,
@@ -30,6 +32,7 @@ export function OrderTimeline({
   courier,
   trackingNumber,
   trackingUrl,
+  t,
 }: {
   status: OrderStatus;
   paymentMethod?: PaymentMethod;
@@ -37,6 +40,7 @@ export function OrderTimeline({
   courier?: string | null;
   trackingNumber?: string | null;
   trackingUrl?: string | null;
+  t: Translator;
 }) {
   const stampFor = (step: OrderStatus) =>
     events.find((event) => event.status === step) ?? null;
@@ -47,7 +51,7 @@ export function OrderTimeline({
         <div className="flex items-center gap-3">
           <Truck className="size-4 shrink-0 text-grey-2" strokeWidth={1.6} />
           <div>
-            <p className="up-xs text-grey-2">{courier ?? "Courier"}</p>
+            <p className="up-xs text-grey-2">{courier ?? t("timeline.courier")}</p>
             {trackingNumber ? (
               <p className="mt-0.5 font-mono text-[13px] font-semibold tabular-nums">
                 {trackingNumber}
@@ -62,7 +66,7 @@ export function OrderTimeline({
             rel="noopener noreferrer"
             className="up-xs border-b border-ink pb-0.5 font-semibold transition-opacity hover:opacity-60"
           >
-            Track the parcel
+            {t("track.trackParcel")}
           </a>
         ) : null}
       </div>
@@ -74,8 +78,8 @@ export function OrderTimeline({
     return (
       <div>
         <div className="rounded-lg border border-line bg-concrete px-4 py-3.5">
-          <p className="up-xs text-grey-2">{orderStatusMeta[status].label}</p>
-          <p className="mt-1.5 text-sm text-grey-2">{orderStatusMeta[status].blurb}</p>
+          <p className="up-xs text-grey-2">{statusLabel(t, status)}</p>
+          <p className="mt-1.5 text-sm text-grey-2">{statusBlurb(t, status)}</p>
           {ended ? (
             <p className="up-xs mt-2 text-grey">{formatDateTime(ended.createdAt)}</p>
           ) : null}
@@ -88,7 +92,7 @@ export function OrderTimeline({
                 key={`${event.status}-${index}`}
                 className="flex flex-wrap justify-between gap-2 text-xs text-grey-2"
               >
-                <span>{orderStatusMeta[event.status].label}</span>
+                <span>{statusLabel(t, event.status)}</span>
                 <span className="tabular-nums">{formatDateTime(event.createdAt)}</span>
               </li>
             ))}
@@ -134,7 +138,7 @@ export function OrderTimeline({
                     done ? "text-ink" : "text-grey",
                   )}
                 >
-                  {step.label}
+                  {t(step.label)}
                 </p>
 
                 {stamp ? (
@@ -145,7 +149,7 @@ export function OrderTimeline({
 
                 {index === current ? (
                   <p className="mt-1 text-xs text-grey-2">
-                    {stamp?.note ?? step.waiting}
+                    {stamp?.note ?? t(step.waiting)}
                   </p>
                 ) : null}
               </div>

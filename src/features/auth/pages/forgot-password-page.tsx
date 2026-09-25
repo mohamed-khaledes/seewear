@@ -1,25 +1,26 @@
 import Link from "next/link";
 
+import { getT } from "@/lib/i18n/server";
 import { AuthShell } from "@/features/auth/components/auth-shell";
 import { ForgotPasswordForm } from "@/features/auth/components/forgot-password-form";
 
-export function ForgotPasswordPage() {
+export async function ForgotPasswordPage() {
+  const t = await getT();
+
   return (
     <AuthShell
-      eyebrow="Account"
-      title="Reset your password"
+      eyebrow={t("account.account")}
+      title={t("auth.resetTitle")}
       footer={
         <>
-          Remembered it?{" "}
+          {t("auth.rememberedIt")}{" "}
           <Link href="/login" className="font-medium text-ink underline underline-offset-4">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </>
       }
     >
-      <p className="mb-5 text-sm leading-relaxed text-grey-2">
-        Enter the email you shop with and we will send a link to choose a new password.
-      </p>
+      <p className="mb-5 text-sm leading-relaxed text-grey-2">{t("auth.resetBody")}</p>
       <ForgotPasswordForm />
     </AuthShell>
   );

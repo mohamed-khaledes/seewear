@@ -78,14 +78,14 @@ export function SizeTables() {
                   </caption>
                   <thead>
                     <tr className="border-y border-line">
-                      <th scope="col" className="up-xs py-2.5 pr-4 text-left text-grey-2">
+                      <th scope="col" className="up-xs py-2.5 pe-4 text-start text-grey-2">
                         Size
                       </th>
                       {chart.columns.map((column) => (
                         <th
                           key={column}
                           scope="col"
-                          className="up-xs py-2.5 pr-4 text-left font-medium text-grey-2"
+                          className="up-xs py-2.5 pe-4 text-start font-medium text-grey-2"
                         >
                           {column}
                         </th>
@@ -97,14 +97,14 @@ export function SizeTables() {
                       <tr key={size} className="border-b border-line">
                         <th
                           scope="row"
-                          className="py-2.5 pr-4 text-left text-sm font-semibold"
+                          className="py-2.5 pe-4 text-start text-sm font-semibold"
                         >
                           {size}
                         </th>
                         {chart.rows[size].map((cm, index) => (
                           <td
                             key={chart.columns[index]}
-                            className="py-2.5 pr-4 tabular-nums text-grey-2"
+                            className="py-2.5 pe-4 tabular-nums text-grey-2"
                           >
                             {unit === "cm" ? cm : toInches(cm)}
                           </td>

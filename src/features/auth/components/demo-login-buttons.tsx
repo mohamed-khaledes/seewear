@@ -9,12 +9,14 @@ import {
   loginAsDemoAdmin,
   loginAsDemoCustomer,
 } from "@/features/auth/services/api/auth-actions";
+import { useT } from "@/lib/i18n";
 
 /**
  * One tap into either side of the store. The passwords live in server-only env
  * vars — these buttons just invoke the server actions.
  */
 export function DemoLoginButtons() {
+  const t = useT();
   const [pending, startTransition] = useTransition();
 
   function run(action: () => Promise<{ error: string } | undefined>) {
@@ -26,9 +28,9 @@ export function DemoLoginButtons() {
 
   return (
     <div className="rounded-xl border border-line bg-concrete p-4">
-      <p className="up-xs text-grey-2">Just looking?</p>
+      <p className="up-xs text-grey-2">{t("auth.demoTitle")}</p>
       <p className="mt-1.5 text-sm text-grey-2">
-        Jump straight in with a pre-filled account — no signup.
+        {t("auth.demoBody")}
       </p>
 
       {/* Always stacked: the auth panel caps at 520px, so a viewport-width
@@ -43,7 +45,7 @@ export function DemoLoginButtons() {
           className="w-full justify-center"
         >
           <LayoutDashboard />
-          View as demo admin
+          {t("auth.demoAdmin")}
         </Button>
         <Button
           type="button"
@@ -54,7 +56,7 @@ export function DemoLoginButtons() {
           className="w-full justify-center"
         >
           <ShoppingBag />
-          View as demo customer
+          {t("auth.demoCustomer")}
         </Button>
       </div>
 

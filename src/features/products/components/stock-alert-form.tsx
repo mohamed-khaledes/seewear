@@ -5,6 +5,7 @@ import { BellRing, Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/lib/i18n";
 import { requestStockAlertAction } from "@/features/products/services/api/stock-alert-actions";
 
 /**
@@ -21,6 +22,7 @@ export function StockAlertForm({
   label: string;
   defaultEmail?: string;
 }) {
+  const t = useT();
   const [email, setEmail] = useState(defaultEmail);
   const [error, setError] = useState<string | null>(null);
   const [savedFor, setSavedFor] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export function StockAlertForm({
     return (
       <p className="flex items-center gap-2 border border-line bg-concrete px-4 py-3 text-sm">
         <Check className="size-4 text-ok" />
-        We will email {email} when {label || "it"} is back.
+        {t("product.notifySaved", { email, what: label || t("product.thisPiece") })}
       </p>
     );
   }
@@ -50,7 +52,7 @@ export function StockAlertForm({
     >
       <label htmlFor="stock-alert-email" className="flex items-center gap-2 text-sm font-semibold">
         <BellRing className="size-4" strokeWidth={1.6} />
-        Email me when {label || "this"} is back
+        {t("product.notifyLabel", { what: label || t("product.thisPiece") })}
       </label>
       <div className="flex gap-2">
         <Input
@@ -58,7 +60,7 @@ export function StockAlertForm({
           type="email"
           required
           autoComplete="email"
-          placeholder="you@email.com"
+          placeholder={t("common.emailPlaceholder")}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           className="h-11 bg-white"
@@ -69,11 +71,11 @@ export function StockAlertForm({
           disabled={pending}
           className="up-xs h-11 shrink-0 px-5 font-semibold"
         >
-          {pending ? <Loader2 className="animate-spin" /> : "Notify me"}
+          {pending ? <Loader2 className="animate-spin" /> : t("product.notifyMe")}
         </Button>
       </div>
       {error ? <p className="text-xs text-sale">{error}</p> : null}
-      <p className="text-[11px] text-grey">One email when it returns. Nothing else.</p>
+      <p className="text-[11px] text-grey">{t("product.notifyBody")}</p>
     </form>
   );
 }

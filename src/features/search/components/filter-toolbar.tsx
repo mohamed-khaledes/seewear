@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sheet";
 import { SORT_OPTIONS } from "@/config/constants";
 import { formatMoney } from "@/lib/utils";
+import { useDir, useT } from "@/lib/i18n";
 import { activeFilterCount } from "@/features/products/services/utils/filters";
 import type { ProductFilters, ProductSort } from "@/features/products";
 import { Viewer3DToggle } from "@/features/products/components/viewer-3d-toggle";
@@ -32,6 +33,8 @@ export function FilterToolbar({
   filters: ProductFilters;
   total: number;
 }) {
+  const t = useT();
+  const dir = useDir();
   const { apply, clearAll } = useFilterNavigation(filters);
   const active = activeFilterCount(filters);
 
@@ -42,20 +45,22 @@ export function FilterToolbar({
           <SheetTrigger asChild>
             <Button variant="outline" size="lg" className="up-sm h-10 font-semibold lg:hidden">
               <SlidersHorizontal />
-              Filters{active > 0 ? ` (${active})` : ""}
+              {t("filters.filters")}
+              {active > 0 ? ` (${active})` : ""}
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-full overflow-y-auto sm:max-w-sm">
+          <SheetContent
+            side={dir === "rtl" ? "right" : "left"}
+            className="w-full overflow-y-auto sm:max-w-sm"
+          >
             <SheetHeader>
-              <SheetTitle className="up-sm font-bold">Filters</SheetTitle>
+              <SheetTitle className="up-sm font-bold">{t("filters.filters")}</SheetTitle>
             </SheetHeader>
             <FilterPanel filters={filters} className="px-4 pb-10" />
           </SheetContent>
         </Sheet>
 
-        <p className="up-xs text-grey-2">
-          {total} {total === 1 ? "piece" : "pieces"}
-        </p>
+        <p className="up-xs text-grey-2">{t("orders.pieceCount", { count: total })}</p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -70,7 +75,7 @@ export function FilterToolbar({
             onClick={clearAll}
             className="up-xs hidden text-grey-2 transition-colors hover:text-ink sm:inline"
           >
-            Clear
+            {t("filters.clear")}
           </button>
         ) : null}
 
@@ -78,13 +83,13 @@ export function FilterToolbar({
           value={filters.sort}
           onValueChange={(value) => apply({ sort: value as ProductSort })}
         >
-          <SelectTrigger size="sm" className="h-10 w-[168px]" aria-label="Sort products">
+          <SelectTrigger size="sm" className="h-10 w-[168px]" aria-label={t("filters.sort")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {SORT_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {t(option.key)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -95,6 +100,7 @@ export function FilterToolbar({
 }
 
 function ActiveFilterChips({ filters }: { filters: ProductFilters }) {
+  const t = useT();
   const { apply, toggleColor, toggleSize, setCategory } = useFilterNavigation(filters);
 
   const chips: { key: string; label: string; remove: () => void }[] = [];
@@ -115,17 +121,25 @@ function ActiveFilterChips({ filters }: { filters: ProductFilters }) {
   if (filters.minCents !== null || filters.maxCents !== null) {
     chips.push({
       key: "price",
-      label: `${filters.minCents !== null ? formatMoney(filters.minCents) : "Any"} – ${
-        filters.maxCents !== null ? formatMoney(filters.maxCents) : "Any"
+      label: `${filters.minCents !== null ? formatMoney(filters.minCents) : t("filters.any")} – ${
+        filters.maxCents !== null ? formatMoney(filters.maxCents) : t("filters.any")
       }`,
       remove: () => apply({ minCents: null, maxCents: null }),
     });
   }
   if (filters.onSale) {
-    chips.push({ key: "sale", label: "On sale", remove: () => apply({ onSale: false }) });
+    chips.push({
+      key: "sale",
+      label: t("filters.onSale"),
+      remove: () => apply({ onSale: false }),
+    });
   }
   if (filters.inStock) {
-    chips.push({ key: "stock", label: "In stock", remove: () => apply({ inStock: false }) });
+    chips.push({
+      key: "stock",
+      label: t("filters.inStock"),
+      remove: () => apply({ inStock: false }),
+    });
   }
 
   if (chips.length === 0) return null;

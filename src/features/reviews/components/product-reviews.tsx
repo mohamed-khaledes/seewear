@@ -9,6 +9,7 @@ import {
   getReviewEligibility,
   getReviewSummary,
 } from "@/features/reviews/services/api/reviews.server";
+import { getT } from "@/lib/i18n/server";
 
 /**
  * Reviews from people who received the piece. "Verified" is not a badge this
@@ -22,10 +23,11 @@ export async function ProductReviews({
   productId: string;
   productSlug: string;
 }) {
-  const [summary, eligibility, user] = await Promise.all([
+  const [summary, eligibility, user, t] = await Promise.all([
     getReviewSummary(productId),
     getReviewEligibility(productId),
     getSessionUser(),
+    getT(),
   ]);
 
   const isAdmin = user?.role === "admin";
@@ -38,9 +40,9 @@ export async function ProductReviews({
     >
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[300px_1fr]">
         <div>
-          <p className="up-xs text-grey-2">Reviews</p>
+          <p className="up-xs text-grey-2">{t("reviews.reviews")}</p>
           <h2 id="reviews-heading" className="mt-2 text-2xl font-bold tracking-tight">
-            {summary.count === 0 ? "No reviews yet" : "What buyers say"}
+            {summary.count === 0 ? t("reviews.none") : t("reviews.whatBuyersSay")}
           </h2>
 
           {summary.average !== null ? (
@@ -65,14 +67,14 @@ export async function ProductReviews({
                         style={{ width: `${(row.count / summary.count) * 100}%` }}
                       />
                     </span>
-                    <span className="w-6 text-right tabular-nums text-grey">{row.count}</span>
+                    <span className="w-6 text-end tabular-nums text-grey">{row.count}</span>
                   </li>
                 ))}
               </ul>
             </div>
           ) : (
             <p className="mt-3 text-sm leading-relaxed text-grey-2">
-              Reviews come only from people whose order with this piece was delivered.
+              {t("reviews.onlyDelivered")}
             </p>
           )}
         </div>
@@ -81,7 +83,9 @@ export async function ProductReviews({
           {eligibility.kind === "can-review" || eligibility.kind === "reviewed" ? (
             <div className="border border-line bg-concrete p-5 sm:p-6">
               <p className="up-xs mb-4 text-grey-2">
-                {eligibility.kind === "reviewed" ? "Your review" : "You bought this — how is it?"}
+                {eligibility.kind === "reviewed"
+                  ? t("reviews.yourReview")
+                  : t("reviews.youBoughtThis")}
               </p>
               <ReviewForm
                 productId={productId}
@@ -96,7 +100,7 @@ export async function ProductReviews({
                 href={`/login?next=${encodeURIComponent(`/product/${productSlug}#reviews`)}`}
                 className="font-medium text-ink underline underline-offset-4"
               >
-                Sign in
+                {t("reviews.signIn")}
               </Link>{" "}
               to review it once it has been delivered.
             </p>

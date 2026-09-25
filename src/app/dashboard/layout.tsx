@@ -20,7 +20,14 @@ export default async function DashboardLayout({
 
   return (
     <SessionProvider user={user}>
-      <div className="grid min-h-dvh bg-concrete lg:grid-cols-[230px_1fr] print:block print:bg-white">
+      {/* The dashboard is written in English only, so it stays left to right
+          even for an admin who shops the storefront in Arabic. An English
+          table mirrored into a right-to-left layout is harder to read, not
+          easier. */}
+      <div
+        dir="ltr"
+        className="grid min-h-dvh bg-concrete lg:grid-cols-[230px_1fr] print:block print:bg-white"
+      >
         <DashboardSidebar user={user} />
         <div className="min-w-0">{children}</div>
       </div>

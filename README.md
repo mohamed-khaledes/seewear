@@ -151,7 +151,9 @@ lands on.
 | `npm run build` | Production build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest: pricing, CSV, order rules, the Paymob HMAC, and every migration run against real Postgres |
+| `npm test` | Vitest: pricing, CSV, order rules, the Paymob HMAC, the Bosta request, and every migration run against real Postgres |
+| `npm run test:e2e` | Playwright: the storefront in a real browser, desktop and phone, English and Arabic |
+| `npm run test:e2e:ui` | The same suite with Playwright's inspector |
 | `npm run art:generate` | Regenerate the placeholder garment SVGs |
 | `npm run db:push` | Apply migrations to the linked Supabase project |
 | `npm run db:types` | Regenerate `src/types/database.types.ts` |
@@ -388,6 +390,16 @@ timeline; the note the admin types travels with the transition through
 step with the date it happened, the courier and the consignment number, and a
 link straight to the courier. The shipped email carries the same three.
 
+**In bulk.** The orders table takes a tick per row and moves a whole selection
+at once — the Friday afternoon action, when twenty parcels go to the same courier.
+It is not a shortcut past the rules: the same `ORDER_STATUS_FLOW` decides what may
+move, orders that cannot make the move are left alone and counted back, and each
+update is matched on the status the row was read with, so two admins on two screens
+move each order once between them. Consignment numbers are deliberately not part of
+it — one number pasted across twenty orders would send twenty customers to someone
+else's parcel — but the courier is shared, so it can be set there. The same
+selection prints a stack of packing slips, one to a page.
+
 **Guests.** Guest orders have no `user_id`, so RLS hides them from every browser
 session — right, and it used to leave guests with no way to follow a parcel.
 `/track` takes an order number and the email it was placed with, looks the pair
@@ -441,8 +453,12 @@ Analytics switched on in the project settings.
 and a permissions policy. The Content-Security-Policy ships as **Report-Only**: it
 logs violations to the browser console and blocks nothing. Before enforcing it, open
 a deployed build with the console open and walk through the shop, a Google sign-in,
-a Paymob payment and a 3D view. Once nothing is reported, rename the header to
-`Content-Security-Policy`.
+a Paymob payment and a 3D view. Once nothing is reported, set `CSP_ENFORCE=1` in
+the environment and redeploy: the same policy then blocks instead of reporting.
+
+It is an environment variable rather than an edit here so that enforcement can be
+switched off again from the Vercel dashboard in the minute after it breaks
+something, without a commit and a rebuild.
 
 ### Rate limits
 
@@ -481,6 +497,60 @@ registration number and registered address are entered once in
 every tax invoice. Egypt's Tax Authority also runs an e-receipt system for B2C sales;
 if your business is enrolled, invoices have to be submitted to it, which needs an
 integration this store does not have yet.
+
+## Languages
+
+The storefront is in English and Arabic. Arabic is a real path — `/ar/products` —
+which the middleware rewrites onto the same routes the app already has, so there is
+no `[locale]` segment anywhere in `src/app`. The prefix exists for search engines,
+which arrive without cookies; the cookie the middleware then sets is what keeps a
+shopper in their language across the links that carry no prefix, which is nearly all
+of them.
+
+- **Words** live in `src/lib/i18n/messages/{en,ar}.ts`. English is the source of
+  truth and Arabic is typed against it, so a new English string stops the build
+  until it has been translated. Server components call `await getT()`, client
+  components call `useT()`.
+- **Direction** is set once, on `<html dir>`, because dialogs and drawers render
+  into `<body>` through a portal and would face the wrong way anywhere deeper.
+  Layout uses logical Tailwind utilities (`ms-`, `pe-`, `start-`, `text-start`)
+  so a mirrored page needs no second set of styles.
+- **Type**: Geist has no Arabic glyphs, so Arabic is set in IBM Plex Sans Arabic.
+  It is not preloaded — an English visitor never downloads it. The wide letter
+  tracking that gives the English its look is dropped for Arabic, where it breaks
+  the joins between letters.
+- **What is not translated**, on purpose: the help pages, the policies, the
+  invoice and the dashboard. Those are long prose and admin tools; a page titled
+  in Arabic that then reads in English is worse than one that is honestly English
+  throughout. The dashboard stays left to right for the same reason.
+
+`sitemap.xml` lists both languages with `hreflang` alternates, and every page
+carries a canonical URL in the language being read.
+
+---
+
+## Couriers
+
+The dashboard has always taken a consignment number typed in by hand, and that is
+still the whole feature for a store whose courier has no API. With `BOSTA_API_KEY`
+set, an order that is ready to ship also gets a **Book with Bosta** button: it
+books the parcel, stores the tracking number, marks the order shipped and emails
+the customer — the same path the manual flow takes, with the typing removed.
+
+Two details are worth knowing, because they are expensive to get wrong and are
+handled at the boundary in `src/lib/courier/bosta.ts`:
+
+- Bosta counts cash on delivery in **pounds**; the store counts everything in
+  piastres. The conversion happens once, on the way out.
+- A card order is already paid, so its booking asks the courier to collect
+  **nothing**. Only a cash order carries an amount.
+
+Rehearse the whole flow against Bosta's staging host before a real parcel is
+booked: `BOSTA_BASE_URL=https://stg-app.bosta.co`. A second courier is a new file
+next to `bosta.ts` implementing the same `CourierDriver`, not a change to the
+dashboard.
+
+---
 
 ## Layout
 

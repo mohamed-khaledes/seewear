@@ -1,3 +1,5 @@
+import type { MessageKey } from "@/lib/i18n";
+
 /** All money is stored and computed as integer piastres (EGP × 100). */
 export const CURRENCY = "EGP" as const;
 
@@ -28,10 +30,10 @@ export const VIEWER_3D_STORAGE_KEY = "seewear.viewer3d";
 export const DEMO_BLOCKED_MESSAGE = "Demo mode — changes are disabled";
 
 export const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "price-asc", label: "Price: low to high" },
-  { value: "price-desc", label: "Price: high to low" },
-] as const;
+  { value: "newest", label: "Newest", key: "filters.sortNewest" },
+  { value: "price-asc", label: "Price: low to high", key: "filters.sortPriceAsc" },
+  { value: "price-desc", label: "Price: high to low", key: "filters.sortPriceDesc" },
+] as const satisfies readonly { value: string; label: string; key: MessageKey }[];
 
 export type SortOption = (typeof SORT_OPTIONS)[number]["value"];
 

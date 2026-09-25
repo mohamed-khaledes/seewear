@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateProfileAction } from "@/features/auth/services/api/profile-actions";
 import { profileSchema, type ProfileValues } from "@/features/auth/types";
+import { useT } from "@/lib/i18n";
 
 export function ProfileForm({
   defaultValues,
@@ -26,6 +27,7 @@ export function ProfileForm({
   defaultValues: ProfileValues;
   email: string;
 }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
 
   const form = useForm<ProfileValues>({
@@ -37,7 +39,7 @@ export function ProfileForm({
     startTransition(async () => {
       const result = await updateProfileAction(values);
       if (result.ok) {
-        toast.success("Profile saved");
+        toast.success(t("account.profileSaved"));
         form.reset(values);
       } else {
         toast.error(result.error);
@@ -53,7 +55,7 @@ export function ProfileForm({
             FormField context that does not exist here. */}
         <div className="grid gap-2">
           <Label htmlFor="account-email" className="up-xs text-grey-2">
-            Email
+            {t("common.email")}
           </Label>
           <Input
             id="account-email"
@@ -68,7 +70,7 @@ export function ProfileForm({
           name="fullName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Name</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("auth.name")}</FormLabel>
               <FormControl>
                 <Input autoComplete="name" className="h-11" {...field} />
               </FormControl>
@@ -82,7 +84,7 @@ export function ProfileForm({
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Phone</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("common.phone")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="tel"
@@ -102,7 +104,7 @@ export function ProfileForm({
           disabled={pending || !form.formState.isDirty}
           className="up-sm mt-2 h-12 justify-self-start px-8 font-semibold"
         >
-          {pending ? "Saving…" : "Save changes"}
+          {pending ? t("account.saving") : t("account.saveChanges")}
         </Button>
       </form>
     </Form>

@@ -18,8 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { primaryImage } from "@/features/products/services/utils/variants";
 import { useProductSearch } from "@/features/search/hooks/use-product-search";
+import { useT } from "@/lib/i18n";
 
 export function SearchDialog() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
   const router = useRouter();
@@ -51,16 +53,16 @@ export function SearchDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        aria-label="Search"
+        aria-label={t("filters.searchTitle")}
         className="text-white/90 transition-opacity hover:text-white"
       >
         <Search className="size-[17px]" strokeWidth={1.5} />
       </DialogTrigger>
 
       <DialogContent className="top-24 max-w-xl translate-y-0 gap-0 p-0">
-        <DialogTitle className="sr-only">Search the store</DialogTitle>
+        <DialogTitle className="sr-only">{t("filters.searchStore")}</DialogTitle>
         <DialogDescription className="sr-only">
-          Search SEEWEAR products by name.
+          {t("filters.searchHint")}
         </DialogDescription>
 
         <form onSubmit={submit} className="border-b border-line p-3">
@@ -70,7 +72,7 @@ export function SearchDialog() {
               autoFocus
               value={term}
               onChange={(event) => setTerm(event.target.value)}
-              placeholder="Search hoodies, tees, outerwear…"
+              placeholder={t("filters.searchPlaceholderLong")}
               className="h-10 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0"
             />
           </div>
@@ -89,7 +91,7 @@ export function SearchDialog() {
             </div>
           ) : results.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-grey-2">
-              Nothing matched “{term.trim()}”. Try a shorter word.
+              {t("filters.searchNothing", { term: term.trim() })}
             </p>
           ) : (
             <ul>
@@ -134,7 +136,7 @@ export function SearchDialog() {
           <button
             type="button"
             onClick={submit}
-            className="up-xs border-t border-line px-4 py-3 text-left font-semibold text-grey-2 transition-colors hover:text-ink"
+            className="up-xs border-t border-line px-4 py-3 text-start font-semibold text-grey-2 transition-colors hover:text-ink"
           >
             See all results for “{term.trim()}” →
           </button>

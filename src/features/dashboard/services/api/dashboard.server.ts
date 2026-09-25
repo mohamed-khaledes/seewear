@@ -243,7 +243,14 @@ export async function getAdminProduct(id: string): Promise<AdminProductRow | nul
 
 type RawAdminOrder = Pick<
   Tables<"orders">,
-  "id" | "order_number" | "email" | "status" | "total_cents" | "created_at" | "fulfilled_at"
+  | "id"
+  | "order_number"
+  | "email"
+  | "status"
+  | "payment_method"
+  | "total_cents"
+  | "created_at"
+  | "fulfilled_at"
 > & {
   profile: { full_name: string | null } | null;
   items: { quantity: number }[];
@@ -261,7 +268,7 @@ export async function getAdminOrders(
   let query = supabase
     .from("orders")
     .select(
-      `id, order_number, email, status, total_cents, created_at, fulfilled_at,
+      `id, order_number, email, status, payment_method, total_cents, created_at, fulfilled_at,
        profile:profiles(full_name),
        items:order_items(quantity)`,
       { count: "exact" },
@@ -303,6 +310,7 @@ export async function getAdminOrders(
       order_number: order.order_number,
       email: order.email,
       status: order.status,
+      payment_method: order.payment_method,
       total_cents: order.total_cents,
       created_at: order.created_at,
       fulfilled_at: order.fulfilled_at,

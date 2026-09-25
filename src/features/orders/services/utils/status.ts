@@ -1,4 +1,5 @@
 import type { StatusTone } from "@/components/common/status-pill";
+import type { MessageKey, Translator } from "@/lib/i18n";
 import type { Enums } from "@/types/database.types";
 
 export type OrderStatus = Enums<"order_status">;
@@ -64,49 +65,68 @@ export function paymentStatus(status: string) {
 
 export type TimelineStep = {
   status: OrderStatus;
-  label: string;
+  label: MessageKey;
   /** What the customer is told while the order sits on this step. */
-  waiting: string;
+  waiting: MessageKey;
 };
 
 const CARD_TIMELINE: TimelineStep[] = [
   {
     status: "pending",
-    label: "Order placed",
-    waiting: "We have the order and are waiting for the payment to clear.",
+    label: "timeline.placedLabel",
+    waiting: "timeline.placedWaitingCard",
   },
-  {
-    status: "paid",
-    label: "Payment confirmed",
-    waiting: "Paid. It is being picked and packed in Cairo.",
-  },
+  { status: "paid", label: "timeline.paidLabel", waiting: "timeline.paidWaiting" },
   {
     status: "fulfilled",
-    label: "Shipped",
-    waiting: "With the courier. Two to four working days across Egypt.",
+    label: "timeline.shippedLabel",
+    waiting: "timeline.shippedWaitingCard",
   },
-  { status: "delivered", label: "Delivered", waiting: "Signed for. Enjoy it." },
+  {
+    status: "delivered",
+    label: "timeline.deliveredLabel",
+    waiting: "timeline.deliveredWaiting",
+  },
 ];
 
 /** Cash orders skip the payment step: the money changes hands at the door. */
 const COD_TIMELINE: TimelineStep[] = [
-  { status: "pending", label: "Order placed", waiting: "We have your order." },
+  {
+    status: "pending",
+    label: "timeline.placedLabel",
+    waiting: "timeline.placedWaitingCod",
+  },
   {
     status: "confirmed",
-    label: "Confirmed",
-    waiting: "Confirmed and being packed. Have the cash ready for the courier.",
+    label: "timeline.confirmedLabel",
+    waiting: "timeline.confirmedWaiting",
   },
   {
     status: "fulfilled",
-    label: "Shipped",
-    waiting: "With the courier. Pay in cash when it arrives.",
+    label: "timeline.shippedLabel",
+    waiting: "timeline.shippedWaitingCod",
   },
   {
     status: "delivered",
-    label: "Delivered and paid",
-    waiting: "Delivered and paid in cash. Enjoy it.",
+    label: "timeline.deliveredCodLabel",
+    waiting: "timeline.deliveredCodWaiting",
   },
 ];
+
+/**
+ * The customer-facing name for a status, in the language being read.
+ *
+ * `orderStatusMeta` keeps the English wording and the colour, because the
+ * dashboard is English-only and a tone is not a word. Anything a customer sees
+ * goes through these two instead.
+ */
+export function statusLabel(t: Translator, status: OrderStatus): string {
+  return t(`orderStatus.${status}Label` as MessageKey);
+}
+
+export function statusBlurb(t: Translator, status: OrderStatus): string {
+  return t(`orderStatus.${status}Blurb` as MessageKey);
+}
 
 export function timelineFor(method: PaymentMethod = "card"): TimelineStep[] {
   return method === "cod" ? COD_TIMELINE : CARD_TIMELINE;

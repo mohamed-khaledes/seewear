@@ -147,7 +147,7 @@ export async function CustomerAdminDetailPage({ customerId }: { customerId: stri
                       <p className="font-semibold text-ink">
                         {address.label || address.full_name}
                         {address.is_default ? (
-                          <span className="up-xs ml-2 font-medium text-ok">Default</span>
+                          <span className="up-xs ms-2 font-medium text-ok">Default</span>
                         ) : null}
                       </p>
                       <p>{address.line1}</p>

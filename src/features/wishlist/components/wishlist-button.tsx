@@ -10,6 +10,7 @@ import {
   useToggleWishlist,
   useWishlistIds,
 } from "@/features/wishlist/hooks/use-wishlist";
+import { useT } from "@/lib/i18n";
 
 type WishlistButtonProps = {
   productId: string;
@@ -24,6 +25,7 @@ export function WishlistButton({
   className,
   variant = "icon",
 }: WishlistButtonProps) {
+  const t = useT();
   const user = useSessionUser();
   const router = useRouter();
   const { data: ids } = useWishlistIds(Boolean(user));
@@ -33,8 +35,8 @@ export function WishlistButton({
 
   function onClick() {
     if (!user) {
-      toast("Sign in to save pieces", {
-        description: "Your wishlist follows your account.",
+      toast(t("wishlist.signInFirst"), {
+        description: t("wishlist.followsAccount"),
         action: { label: "Sign in", onClick: () => router.push("/login?next=/wishlist") },
       });
       return;
@@ -64,7 +66,11 @@ export function WishlistButton({
       type="button"
       onClick={onClick}
       aria-pressed={saved}
-      aria-label={saved ? `Remove ${productName} from wishlist` : `Save ${productName}`}
+      aria-label={
+        saved
+          ? t("wishlist.remove", { name: productName })
+          : t("wishlist.add", { name: productName })
+      }
       className={cn(
         "grid size-8 place-items-center rounded-full border border-line bg-white/90 text-ink backdrop-blur transition-colors hover:border-ink",
         className,

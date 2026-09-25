@@ -41,6 +41,7 @@ import {
   type AddressResult,
 } from "@/features/auth/services/api/address-actions";
 import { addressSchema, type AddressValues, type SavedAddress } from "@/features/auth/types";
+import { useT } from "@/lib/i18n";
 
 /**
  * The saved addresses checkout offers as one-tap fills. Checkout can add to
@@ -48,23 +49,24 @@ import { addressSchema, type AddressValues, type SavedAddress } from "@/features
  * it is here for correcting one and choosing the default.
  */
 export function AddressBook({ addresses }: { addresses: SavedAddress[] }) {
+  const t = useT();
   const [adding, setAdding] = useState(false);
 
   return (
     <section className="border border-line bg-paper p-6">
       <div className="mb-5 flex items-center justify-between gap-3">
-        <h2 className="up-sm text-grey-2">Addresses</h2>
+        <h2 className="up-sm text-grey-2">{t("account.addresses")}</h2>
         <Dialog open={adding} onOpenChange={setAdding}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="up-xs font-semibold">
               <Plus className="size-3.5" />
-              Add address
+              {t("account.addAddress")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>New address</DialogTitle>
-              <DialogDescription>Offered as a one-tap fill at checkout.</DialogDescription>
+              <DialogTitle>{t("account.newAddress")}</DialogTitle>
+              <DialogDescription>{t("account.addressesBody")}</DialogDescription>
             </DialogHeader>
             <AddressForm
               makeDefault={addresses.length === 0}
@@ -76,7 +78,7 @@ export function AddressBook({ addresses }: { addresses: SavedAddress[] }) {
 
       {addresses.length === 0 ? (
         <p className="text-sm text-grey-2">
-          No saved addresses yet. Tick “save this address” at checkout and it lands here.
+          {t("account.addressesEmpty")}
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -90,6 +92,7 @@ export function AddressBook({ addresses }: { addresses: SavedAddress[] }) {
 }
 
 function AddressCard({ address }: { address: SavedAddress }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -113,7 +116,7 @@ function AddressCard({ address }: { address: SavedAddress }) {
           <p className="font-semibold">
             {address.label || address.full_name}
             {address.is_default ? (
-              <span className="up-xs ml-2 font-medium text-ok">Default</span>
+              <span className="up-xs ms-2 font-medium text-ok">{t("account.default")}</span>
             ) : null}
           </p>
           <p className="text-grey-2">
@@ -131,18 +134,20 @@ function AddressCard({ address }: { address: SavedAddress }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => makeDefaultAddressAction(address.id), "Default updated")}
+            onClick={() =>
+              run(() => makeDefaultAddressAction(address.id), t("account.defaultUpdated"))
+            }
             className="up-xs text-grey-2 underline-offset-4 hover:text-ink hover:underline"
           >
-            Make default
+            {t("account.makeDefault")}
           </button>
         ) : null}
         <button
           type="button"
           disabled={pending}
-          onClick={() => run(() => deleteAddressAction(address.id), "Address removed")}
-          aria-label={`Remove ${address.label || address.line1}`}
-          className="ml-auto text-grey-2 transition-colors hover:text-sale"
+          onClick={() => run(() => deleteAddressAction(address.id), t("account.addressRemoved"))}
+          aria-label={`${t("account.remove")} — ${address.label || address.line1}`}
+          className="ms-auto text-grey-2 transition-colors hover:text-sale"
         >
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
         </button>
@@ -152,6 +157,7 @@ function AddressCard({ address }: { address: SavedAddress }) {
 }
 
 function AddressForm({ makeDefault, onDone }: { makeDefault: boolean; onDone: () => void }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -174,7 +180,7 @@ function AddressForm({ makeDefault, onDone }: { makeDefault: boolean; onDone: ()
     startTransition(async () => {
       const result = await saveAddressAction(values);
       if (result.ok) {
-        toast.success("Address saved");
+        toast.success(t("account.addressSaved"));
         onDone();
         router.refresh();
       } else {
@@ -206,13 +212,13 @@ function AddressForm({ makeDefault, onDone }: { makeDefault: boolean; onDone: ()
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3.5">
-        {text("label", "Label (optional) — Home, Work", "off")}
+        {text("label", t("account.addressLabel"), "off")}
         <div className="grid gap-3.5 sm:grid-cols-2">
-          {text("fullName", "Full name", "name")}
+          {text("fullName", t("common.fullName"), "name")}
           {text("phone", "Phone", "tel")}
         </div>
-        {text("line1", "Street and building", "address-line1")}
-        {text("line2", "Apartment, floor (optional)", "address-line2")}
+        {text("line1", t("checkout.addressPlaceholder"), "address-line1")}
+        {text("line2", t("checkout.apartment"), "address-line2")}
         <div className="grid gap-3.5 sm:grid-cols-2">
           {text("city", "City", "address-level2")}
           <FormField
@@ -220,11 +226,11 @@ function AddressForm({ makeDefault, onDone }: { makeDefault: boolean; onDone: ()
             name="governorate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="up-xs text-grey-2">Governorate</FormLabel>
+                <FormLabel className="up-xs text-grey-2">{t("checkout.governorate")}</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger className="h-11 w-full">
-                      <SelectValue placeholder="Choose one" />
+                      <SelectValue placeholder={t("checkout.chooseOne")} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -240,7 +246,7 @@ function AddressForm({ makeDefault, onDone }: { makeDefault: boolean; onDone: ()
             )}
           />
         </div>
-        {text("postalCode", "Postal code (optional)", "postal-code")}
+        {text("postalCode", t("checkout.postalCode"), "postal-code")}
         <FormField
           control={form.control}
           name="isDefault"
@@ -254,7 +260,7 @@ function AddressForm({ makeDefault, onDone }: { makeDefault: boolean; onDone: ()
                 />
               </FormControl>
               <FormLabel htmlFor="address-default" className="text-xs font-normal text-grey-2">
-                Use this at checkout by default
+                {t("account.useByDefault")}
               </FormLabel>
             </FormItem>
           )}

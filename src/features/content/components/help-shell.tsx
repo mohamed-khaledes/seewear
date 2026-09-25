@@ -37,7 +37,7 @@ export function HelpShell({
                   href={topic.href}
                   aria-current={current ? "page" : undefined}
                   className={cn(
-                    "up-sm block border px-3 py-2 transition-colors lg:border-0 lg:border-l-2 lg:px-3 lg:py-1.5",
+                    "up-sm block border px-3 py-2 transition-colors lg:border-0 lg:border-s-2 lg:px-3 lg:py-1.5",
                     current
                       ? "border-ink bg-ink text-white lg:bg-transparent lg:text-ink"
                       : "border-line bg-paper text-grey-2 hover:text-ink lg:border-line lg:bg-transparent",

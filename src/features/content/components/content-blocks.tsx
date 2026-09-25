@@ -120,7 +120,7 @@ export function Callout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-6 border-l-2 border-ink bg-concrete p-4 sm:p-5">
+    <div className="mt-6 border-s-2 border-ink bg-concrete p-4 sm:p-5">
       <p className="up-xs text-ink">{title}</p>
       <div className="mt-2 max-w-[60ch] text-sm leading-relaxed text-grey-2">
         {children}

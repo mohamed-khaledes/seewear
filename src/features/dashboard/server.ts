@@ -5,7 +5,11 @@ export { ProductFormPage } from "./pages/product-form-page";
 export { CategoriesAdminPage } from "./pages/categories-admin-page";
 export { OrdersAdminPage } from "./pages/orders-admin-page";
 export { OrderAdminDetailPage } from "./pages/order-admin-detail-page";
-export { AdminInvoicePage, PackingSlipPage } from "./pages/order-documents-pages";
+export {
+  AdminInvoicePage,
+  PackingSlipPage,
+  PackingSlipsBatchPage,
+} from "./pages/order-documents-pages";
 export { CustomersAdminPage } from "./pages/customers-admin-page";
 export { CustomerAdminDetailPage } from "./pages/customer-admin-detail-page";
 export { PaymentsAdminPage } from "./pages/payments-admin-page";

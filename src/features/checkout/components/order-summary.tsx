@@ -7,6 +7,7 @@ import { ProductShot } from "@/components/common/product-shot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import { formatTaxRate, type PricingRules } from "@/lib/pricing";
 import { computeTotals } from "@/features/cart/services/utils/totals";
 import type { CartLine } from "@/features/cart/types";
@@ -29,6 +30,7 @@ export function OrderSummary({
   email: string;
   onDiscountChange: (discount: DiscountPreview | null) => void;
 }) {
+  const t = useT();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -56,8 +58,8 @@ export function OrderSummary({
   }
 
   return (
-    <aside className="bg-concrete px-5 py-10 lg:border-l lg:border-line lg:px-11">
-      <h2 className="up-sm mb-5 text-grey-2">Order summary</h2>
+    <aside className="bg-concrete px-5 py-10 lg:border-s lg:border-line lg:px-11">
+      <h2 className="up-sm mb-5 text-grey-2">{t("cart.orderSummary")}</h2>
 
       <ul className="grid gap-4">
         {items.map((line) => (
@@ -70,14 +72,14 @@ export function OrderSummary({
                 className="aspect-[1/1.07]"
                 imageClassName="p-1.5"
               />
-              <span className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full bg-grey-2 text-[10px] font-semibold text-white">
+              <span className="absolute -end-2 -top-2 grid size-5 place-items-center rounded-full bg-grey-2 text-[10px] font-semibold text-white">
                 {line.quantity}
               </span>
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold">{line.name}</p>
               <p className="up-xs mt-0.5 text-grey-2">
-                {[line.color, line.size].filter(Boolean).join(" · ") || "One size"}
+                {[line.color, line.size].filter(Boolean).join(" · ") || t("common.oneSize")}
               </p>
             </div>
             <p className="text-xs font-semibold tabular-nums">
@@ -96,7 +98,7 @@ export function OrderSummary({
           <button
             type="button"
             onClick={() => onDiscountChange(null)}
-            aria-label="Remove discount code"
+            aria-label={t("checkout.removeDiscount")}
             className="text-ok transition-opacity hover:opacity-70"
           >
             <X className="size-3.5" />
@@ -108,8 +110,8 @@ export function OrderSummary({
             <Input
               value={code}
               onChange={(event) => setCode(event.target.value.toUpperCase())}
-              placeholder="Discount code"
-              aria-label="Discount code"
+              placeholder={t("checkout.discountCode")}
+              aria-label={t("checkout.discountCode")}
               className="h-11"
             />
             <Button
@@ -119,7 +121,7 @@ export function OrderSummary({
               disabled={pending}
               className="up-xs h-11 shrink-0 px-4 font-semibold"
             >
-              Apply
+              {t("checkout.apply")}
             </Button>
           </div>
           {error ? <p className="text-xs text-sale">{error}</p> : null}
@@ -127,17 +129,30 @@ export function OrderSummary({
       )}
 
       <dl className="mt-6 grid gap-2.5 border-t border-line pt-5 text-sm">
-        <Row label="Subtotal" value={formatMoney(totals.subtotalCents)} />
+        <Row label={t("cart.subtotal")} value={formatMoney(totals.subtotalCents)} />
         {totals.discountCents > 0 ? (
-          <Row label="Discount" value={`-${formatMoney(totals.discountCents)}`} accent />
+          <Row
+            label={t("checkout.discount")}
+            value={`-${formatMoney(totals.discountCents)}`}
+            accent
+          />
         ) : null}
         <Row
-          label={governorate ? `Shipping to ${governorate}` : "Shipping (estimate)"}
-          value={totals.shippingCents === 0 ? "Free" : formatMoney(totals.shippingCents)}
+          label={
+            governorate
+              ? t("checkout.shippingTo", { governorate })
+              : t("checkout.shippingEstimate")
+          }
+          value={
+            totals.shippingCents === 0 ? t("common.free") : formatMoney(totals.shippingCents)
+          }
         />
-        <Row label={`VAT (${formatTaxRate(rules)})`} value={formatMoney(totals.taxCents)} />
+        <Row
+          label={t("cart.vat", { rate: formatTaxRate(rules) })}
+          value={formatMoney(totals.taxCents)}
+        />
         <div className="mt-2 flex items-baseline justify-between border-t border-line pt-4">
-          <dt className="text-base font-bold">Total</dt>
+          <dt className="text-base font-bold">{t("cart.total")}</dt>
           <dd className="text-lg font-bold tabular-nums">
             {formatMoney(totals.totalCents)}
           </dd>

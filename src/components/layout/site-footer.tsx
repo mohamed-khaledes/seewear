@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { footerNav, siteConfig } from "@/config/site";
 import { getStoreSettings } from "@/lib/store-settings";
+import { getT } from "@/lib/i18n/server";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 
 /**
  * The legal line at the bottom reads the business identity from Settings. A
@@ -9,7 +11,7 @@ import { getStoreSettings } from "@/lib/store-settings";
  * placeholder where a registration number should be.
  */
 export async function SiteFooter() {
-  const settings = await getStoreSettings();
+  const [settings, t] = await Promise.all([getStoreSettings(), getT()]);
   const identity = [
     settings.legal_name,
     settings.commercial_register ? `C.R. ${settings.commercial_register}` : null,
@@ -25,7 +27,7 @@ export async function SiteFooter() {
             {siteConfig.name}
           </p>
           <p className="mt-2.5 max-w-60 text-xs leading-relaxed opacity-60">
-            {siteConfig.tagline} Shipped across Egypt from Cairo.
+            {t("footer.blurb")}
           </p>
         </div>
 
@@ -34,17 +36,17 @@ export async function SiteFooter() {
             <h2 className="up-sm mb-4 opacity-60">
               {group.href ? (
                 <Link href={group.href} className="transition-opacity hover:opacity-100">
-                  {group.title}
+                  {t(group.titleKey)}
                 </Link>
               ) : (
-                group.title
+                t(group.titleKey)
               )}
             </h2>
             <ul className="text-xs">
               {group.links.map((link) => (
                 <li key={link.href} className="mb-2.5 opacity-75">
                   <Link href={link.href} className="transition-opacity hover:opacity-100">
-                    {link.label}
+                    {t(link.key)}
                   </Link>
                 </li>
               ))}
@@ -55,10 +57,11 @@ export async function SiteFooter() {
 
       <div className="up-xs mt-10 flex flex-wrap justify-between gap-x-6 gap-y-2 border-t border-line-dark pt-5 opacity-45">
         <span>
-          © {new Date().getFullYear()} {settings.store_name || siteConfig.name} — All prices
-          in EGP
+          © {new Date().getFullYear()} {settings.store_name || siteConfig.name} —{" "}
+          {t("footer.rights")}
         </span>
         {identity.length > 0 ? <span>{identity.join(" · ")}</span> : null}
+        <LocaleSwitcher className="opacity-100" />
       </div>
     </footer>
   );

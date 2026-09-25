@@ -8,9 +8,11 @@ import { Editorial } from "@/features/home/components/editorial";
 import { Hero } from "@/features/home/components/hero";
 import { ProductGrid } from "@/features/products";
 import { getFeaturedProducts } from "@/features/products/server";
+import { getT } from "@/lib/i18n/server";
+import type { Translator } from "@/lib/i18n";
 
 export async function HomePage() {
-  const featured = await getFeaturedProducts(10);
+  const [featured, t] = await Promise.all([getFeaturedProducts(10), getT()]);
 
   return (
     <>
@@ -26,28 +28,32 @@ export async function HomePage() {
           currenciesAccepted: "EGP",
         }}
       />
-      <Hero />
-      <Marquee items={marqueeItems} />
+      <Hero t={t} />
+      <Marquee items={marqueeItems} t={t} />
 
-      <SectionHeader title="The Owners Club" href="/products" />
+      <SectionHeader
+        title={t("home.featured")}
+        href="/products"
+        linkLabel={t("listing.seeEverything")}
+      />
 
       {featured.length > 0 ? (
         <ProductGrid products={featured} priorityCount={5} />
       ) : (
-        <EmptyCatalog />
+        <EmptyCatalog t={t} />
       )}
 
-      <Editorial />
+      <Editorial t={t} />
     </>
   );
 }
 
-function EmptyCatalog() {
+function EmptyCatalog({ t }: { t: Translator }) {
   return (
     <div className="border-y border-line bg-paper px-6 py-20 text-center">
-      <h3 className="text-base font-semibold">The rail is empty</h3>
+      <h3 className="text-base font-semibold">{t("home.emptyTitle")}</h3>
       <p className="mx-auto mt-2 max-w-sm text-sm text-grey-2">
-        No products are live yet. Add them from the dashboard, or run{" "}
+        {t("home.emptyBody")} Add them from the dashboard, or run{" "}
         <code className="rounded bg-concrete px-1.5 py-0.5 font-mono text-xs">
           npm run db:seed
         </code>{" "}
@@ -57,7 +63,7 @@ function EmptyCatalog() {
         href="/dashboard/products"
         className="up-sm mt-5 inline-block border-b border-line pb-0.5 font-semibold text-grey-2 transition-colors hover:text-ink"
       >
-        Go to products →
+        {t("home.emptyCta")}
       </Link>
     </div>
   );

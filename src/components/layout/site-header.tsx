@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { mainNav, siteConfig } from "@/config/site";
 import { getStoreSettings } from "@/lib/store-settings";
+import { getT } from "@/lib/i18n/server";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { UserMenu } from "@/features/auth/components/user-menu";
 import { BagButton } from "@/features/cart";
@@ -9,7 +11,7 @@ import { SearchDialog } from "@/features/search";
 import type { SessionUser } from "@/features/auth/types";
 
 export async function SiteHeader({ user }: { user: SessionUser | null }) {
-  const settings = await getStoreSettings();
+  const [settings, t] = await Promise.all([getStoreSettings(), getT()]);
 
   return (
     <>
@@ -22,14 +24,14 @@ export async function SiteHeader({ user }: { user: SessionUser | null }) {
       <header data-chrome className="sticky top-0 z-50 grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line-dark bg-ink px-5 py-4 text-white lg:grid-cols-[1fr_auto_1fr] lg:px-6">
         <div className="flex items-center gap-4">
           <MobileNav />
-          <nav aria-label="Main" className="hidden gap-6 text-[11px] font-medium lg:flex">
+          <nav aria-label={t("nav.main")} className="hidden gap-6 text-[11px] font-medium lg:flex">
             {mainNav.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className="opacity-80 transition-opacity hover:opacity-100"
               >
-                {link.label}
+                {t(link.key)}
               </Link>
             ))}
           </nav>
@@ -43,7 +45,7 @@ export async function SiteHeader({ user }: { user: SessionUser | null }) {
         </Link>
 
         <div className="flex items-center justify-end gap-4 text-[11px] font-medium sm:gap-5">
-          <span className="hidden opacity-80 sm:inline">EG / EGP</span>
+          <LocaleSwitcher className="hidden sm:flex" />
           <SearchDialog />
           <UserMenu user={user} />
           <BagButton />

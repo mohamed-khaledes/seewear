@@ -16,9 +16,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { updatePasswordAction } from "@/features/auth/services/api/auth-actions";
 import { resetPasswordSchema, type ResetPasswordValues } from "@/features/auth/types";
+import { useT } from "@/lib/i18n";
 
 export function ResetPasswordForm() {
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   const form = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -40,7 +42,7 @@ export function ResetPasswordForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">New password</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("auth.newPassword")}</FormLabel>
               <FormControl>
                 <Input type="password" autoComplete="new-password" className="h-11" {...field} />
               </FormControl>
@@ -53,7 +55,7 @@ export function ResetPasswordForm() {
           name="confirm"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="up-xs text-grey-2">Type it again</FormLabel>
+              <FormLabel className="up-xs text-grey-2">{t("auth.repeatPassword")}</FormLabel>
               <FormControl>
                 <Input type="password" autoComplete="new-password" className="h-11" {...field} />
               </FormControl>
@@ -67,7 +69,7 @@ export function ResetPasswordForm() {
           disabled={pending}
           className="up-sm mt-2 h-12 w-full justify-center font-semibold"
         >
-          {pending ? "Saving…" : "Save new password"}
+          {pending ? t("account.saving") : t("auth.savePassword")}
         </Button>
       </form>
     </Form>
