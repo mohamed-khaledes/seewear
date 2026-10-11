@@ -77,7 +77,12 @@ export async function loadPricingRules(
   ]);
 
   if (settings.error || !settings.data) {
-    console.error("[pricing] store settings unreadable, using defaults", settings.error);
+    // The message, not the object: a network-level failure arrives with no
+    // enumerable fields, so logging it whole prints "{}" and explains nothing.
+    console.error(
+      "[pricing] store settings unreadable, using defaults:",
+      settings.error?.message ?? "no settings row",
+    );
     return DEFAULT_PRICING_RULES;
   }
 
