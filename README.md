@@ -143,6 +143,36 @@ lands on.
 
 ---
 
+## The bag
+
+A guest's bag lives in `localStorage` (`seewear.cart`). A signed-in customer's bag
+also lives in `cart_items`, so it follows them to another device. Keeping the two
+copies in step is the job of `CartSync`, and it has one rule:
+
+> **The bag records whose it is**, and a merge happens only at the moment a guest
+> bag becomes an account bag — never on an ordinary page load.
+
+That stamp is what makes the rest decidable. Once per sign-in, by whose bag is in
+the browser:
+
+| In the browser | What happens |
+|---|---|
+| A guest's | Merged into the account bag — union by variant, quantities summed, capped at stock. The only merge in the system. |
+| Another account's | Dropped. One customer's bag is never folded into another's. |
+| This account's, holding something | Pushed up. The browser the customer is looking at wins. |
+| This account's, empty | Left alone both ways. Pulling would put back what they just removed; pushing would wipe a bag they filled on another device. |
+| None of its own | The account bag arrives from the database. |
+
+After that, local changes are mirrored up, debounced by 800ms. Signing out drops an
+account bag from the browser — it is safe in the account, and a shared computer must
+not hand it to the next person.
+
+Why this is written down: a merge on *every* page load added the saved bag to
+itself, so one jacket became two, then four, and anything removed came back on the
+next visit. `tests/e2e/cart.spec.ts` is the shape of that bug.
+
+---
+
 ## Scripts
 
 | Command | What it does |

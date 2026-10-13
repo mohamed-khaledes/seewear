@@ -26,7 +26,7 @@ export default async function ShopLayout({
       </main>
       <SiteFooter />
       <CartDrawer />
-      <CartSync signedIn={Boolean(user)} />
+      <CartSync userId={user?.id ?? null} />
       {/* One WebGL canvas for the whole grid — a browser will not give eleven
           cards eleven contexts. */}
       <ModelPeekPanel />
